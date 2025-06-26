@@ -264,6 +264,19 @@ t_all_advanced <- t_all_advanced[!t_all_advanced$team== "League Average",]
 
 t_per_game <- t_per_game[!t_per_game$team== "League Average",]
 
+##########      Adding Playoff Column         #########
+
+t_all_advanced <- t_all_advanced %>%
+  mutate(
+    made_playoffs = if_else(grepl("\\*$", team), 1, 0),
+    team = gsub("\\*$", "", team)  # optional: remove * from name
+  )
+
+t_per_game <- t_per_game %>%
+  mutate(
+    made_playoffs = if_else(grepl("\\*$", team), 1, 0),
+    team = gsub("\\*$", "", team)  # optional: remove * from name
+  )
 
 
 #########         Salary Data         ############
