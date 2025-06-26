@@ -252,12 +252,6 @@ a_t_wnba_2025 <- a_t_wnba_2025 %>% mutate(year = 2025)
 #New York Liberty, Dallas Wings, Phoenix Mercury, Washington Mystics
 
 
-
-
-
-
-
-
 #########          Stacking team sets together     #############
 
 t_all_advanced <- bind_rows( a_t_wnba_2022, a_t_wnba_2023, a_t_wnba_2024, a_t_wnba_2025) %>% 
