@@ -281,7 +281,7 @@ library(ggrepel)
 gsv_advanced <- all_advanced |> 
   mutate(across(c("g":"ws_40"),
                 as.numeric)) |>
-  #filter(team == "GSV") |>  
+  filter(team == "GSV") |>  
   drop_na() |>
   clean_names()
 
@@ -310,7 +310,9 @@ ggplot(GSV_pca_scores, aes(x = PC1, y = PC2)) +
        y = "PC2") +
   theme_minimal()
 
-
+######################################################
+# PCA of entire WNBA, by position
+# possibly filter for only players with a certain amount of minutes played?
 
 
 # Clean version of all_advanced for the whole WNBA
@@ -330,17 +332,102 @@ wnba_pca <- prcomp(pca_data, center = TRUE, scale. = TRUE)
 # Add player/team info back
 wnba_pca_scores <- as_tibble(wnba_pca$x[, 1:2]) |> 
   bind_cols(wnba_advanced |> 
-              select(player, team, year) |> 
-              slice(1:nrow(wnba_pca$x)))
+              select(player, team, year, pos) |> 
+              filter(year == 2025) |>
+              slice(1:nrow(wnba_pca$x))) # dataset still has multiple observations for every player
+  
 
 # Plot
-ggplot(wnba_pca_scores, aes(x = PC1, y = PC2, color = team)) +
+ggplot(wnba_pca_scores, aes(x = PC1, y = PC2, color = pos)) +
   geom_point(alpha = 0.7) +
-  labs(title = "PCA of WNBA Players (Advanced Stats)",
+  labs(title = "PCA of WNBA Players (Advanced Stats) by position",
        subtitle = "First two principal components",
        x = "PC1",
        y = "PC2") +
   theme_minimal()
+
+
+######################################################
+###### PCA ofr 2025 WNBA players with 50+ minutes played 
+
+# 1. Clean and filter dataset
+wnba_advanced_filtered <- all_advanced |> 
+  mutate(across(c("g":"trb_percent"), as.numeric)) |> 
+  drop_na() |> 
+  clean_names() |> 
+  filter(year == 2025, mp > 50) |>           # Filter for year + playing time
+  group_by(player) |>                         # Ensure one row per player
+  slice_max(mp, n = 1, with_ties = FALSE) |> 
+  ungroup()
+
+
+# 2. Prepare PCA matrix
+pca_data <- wnba_advanced_filtered |> 
+  select(where(is.numeric), -year, -tov_percent) |> 
+  scale()
+
+# 3. Run PCA
+wnba_pca <- prcomp(pca_data, center = TRUE, scale. = TRUE)
+
+# 4. Combine PCA scores with metadata
+wnba_pca_scores <- as_tibble(wnba_pca$x[, 1:2]) |> 
+  bind_cols(wnba_advanced_filtered |> select(player, team, year, pos))
+
+wnba_pca_scores <- wnba_pca_scores |> 
+  mutate(pos_grouped = case_when(
+    pos %in% c("C", "C-F") ~ "C",
+    pos %in% c("F", "F-C") ~ "F",
+    pos %in% c("G", "F-G", "G-F") ~ "G",
+    TRUE ~ "Other"
+  ))
+
+
+# 5. Plot
+ggplot(wnba_pca_scores, aes(x = PC1, y = PC2, color = pos_grouped)) +
+  geom_point(alpha = 0.7) +
+  labs(title = "PCA of WNBA Players (Advanced Stats) by Position",
+       subtitle = "Filtered for start of 2025 season and 50+ minutes played",
+       x = "PC1",
+       y = "PC2") +
+  theme_minimal()
+
+
+library(ggrepel)
+
+########### Labelling star players 
+
+# 1. Define your star players
+star_players <- c("Breanna Stewart", "A'ja Wilson", "Sabrina Ionescu", 
+                  "Caitlin Clark", "Paige Bueckers", "Angel Reese", 
+                  "Hailey Van Lith", "Kelsey Plum", "Napheesa Collier", 
+                  "Sabrina Ionescu", "Jonquel Jones", "Aliyah Boston", 
+                  "Kamilla Cardoso", "Brittney Griner")
+
+# 2. Add label column
+wnba_pca_scores <- wnba_pca_scores |> 
+  mutate(label_player = if_else(player %in% star_players, player, NA_character_))
+
+# Plot with labels
+ggplot(wnba_pca_scores, aes(x = PC1, y = PC2, color = pos_grouped)) +
+  geom_point(alpha = 0.7) +
+  geom_label_repel(aes(label = label_player),
+                   na.rm = TRUE,
+                   fill = alpha("white", 0.7),  # semi-transparent background
+                   box.padding = 0.5, 
+                   point.padding = 0.3,
+                   size = 3,
+                   segment.color = "gray40",
+                   segment.size = 0.5,
+                   min.segment.length = 0) +
+  labs(title = "PCA of WNBA Players (Advanced Stats) by Position",
+       subtitle = "Filtered for start of 2025 season and 50+ minutes played", 
+       color = "Position") +
+  theme_minimal()
+
+
+
+
+
 
 
 
@@ -351,6 +438,16 @@ fviz_pca_biplot(GSV_pca,
                 labelsize = 5,          # size of variable labels
                 col.var = "darkblue",   # color of variable arrows and labels
                 repel = TRUE)           # avoid overlapping labels
+
+
+
+
+
+
+
+
+
+
 
 
 # How many pcas should we use?
@@ -380,13 +477,13 @@ plot_ly(pca_scores_3d, x = ~PC1, y = ~PC2, z = ~PC3,
 
 #install.packages("GGally")
 library(GGally)
-pca_scores_df <- as_tibble(GSV_pca$x[, 1:5]) |>
+pca_scores_df <- as_tibble(GSV_pca$x[, 1:3]) |>
   bind_cols(gsv_advanced |> select(player, team, year) |> slice(1:nrow(GSV_pca$x)))
 
-ggpairs(pca_scores_df, columns = 1:5, aes(color = team))
+ggpairs(pca_scores_df, columns = 1:3, aes(color = team))
 
 
-# Clustering:
+4# Clustering:
 
 wnba_advanced |> 
   ggplot(aes(x = e_fg_percent)) + 
