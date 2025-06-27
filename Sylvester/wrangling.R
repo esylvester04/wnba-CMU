@@ -313,38 +313,38 @@ all_advanced |>
   theme_minimal()
 
 # PCA:
-# group by team, clustering analysis for positions on a single team
+# group by team, clustering analysis for positions on a single team- Golden State
 
 library(cluster)
 library(factoextra)
 library(ggrepel)
 
-# Clean version of all_advanced — tidyverse style
-all_advanced_clean <- all_advanced |> 
+# Clean version of all_advanced 
+gsv_advanced <- all_advanced |> 
   mutate(across(c("g":"ws_40"),
                 as.numeric)) |>
-  filter(team == "GSV") |>  
+  #filter(team == "GSV") |>  
   drop_na() |>
   clean_names()
 
-View(all_advanced_clean)
+View(gsv_advanced)
 
 # Prepare numeric matrix for PCA 
-pca_data <- all_advanced_clean |>
+pca_data <- gav_advanced |>
   select(where(is.numeric), -year) |>
   scale()
 
 # Run PCA
-pca <- prcomp(pca_data, center = TRUE, scale. = TRUE)
+GSV_pca <- prcomp(pca_data, center = TRUE, scale. = TRUE)
 
 # Add player info back
-pca_scores <- as_tibble(pca$x[, 1:2]) |>
-  bind_cols(all_advanced_clean |>
+GSV_pca_scores <- as_tibble(pca$x[, 1:2]) |>
+  bind_cols(gsv_advanced |>
               select(player, team, year) |>
               slice(1:nrow(pca$x)))
 
 
-ggplot(pca_scores, aes(x = PC1, y = PC2)) +
+ggplot(GSV_pca_scores, aes(x = PC1, y = PC2)) +
   geom_point(alpha = 0.7) +
   labs(title = "PCA of Golden State Valkyeries Advanced Stats (first 15 games)",
        subtitle = "First two principal components",
@@ -354,7 +354,39 @@ ggplot(pca_scores, aes(x = PC1, y = PC2)) +
 
 
 
-fviz_pca_biplot(pca,
+
+# Clean version of all_advanced for the whole WNBA
+wnba_advanced <- all_advanced |> 
+  mutate(across(c("g":"ws_40"), as.numeric)) |>
+  drop_na() |>
+  clean_names()
+
+# Prepare numeric matrix for PCA (exclude year)
+pca_data <- wnba_advanced |> 
+  select(where(is.numeric), -year) |> 
+  scale()
+
+# Run PCA
+wnba_pca <- prcomp(pca_data, center = TRUE, scale. = TRUE)
+
+# Add player/team info back
+wnba_pca_scores <- as_tibble(wnba_pca$x[, 1:2]) |> 
+  bind_cols(wnba_advanced |> 
+              select(player, team, year) |> 
+              slice(1:nrow(wnba_pca$x)))
+
+# Plot
+ggplot(wnba_pca_scores, aes(x = PC1, y = PC2, color = team)) +
+  geom_point(alpha = 0.7) +
+  labs(title = "PCA of WNBA Players (Advanced Stats)",
+       subtitle = "First two principal components",
+       x = "PC1",
+       y = "PC2") +
+  theme_minimal()
+
+
+
+fviz_pca_biplot(GSV_pca,
                 label = "var",          # label variables (stats)
                 alpha.ind = 0.25,       # transparency of points (players)
                 alpha.var = 0.75,       # transparency of variable arrows
@@ -365,4 +397,186 @@ fviz_pca_biplot(pca,
 
 # How many pcas should we use?
 
+summary(GSV_pca)
+# maybe 3 based on proportion of variance?
 
+# elbow plot:
+GSV_pca |> 
+  fviz_eig(addlabels = TRUE) +
+  geom_hline(
+    yintercept = 100 * (1 / ncol(GSV_pca$x)), 
+    linetype = "dashed", 
+    color = "darkred",
+  ) # indicates maybe 5??
+
+
+# 3D plot of first 3 dimensions:
+library(plotly)
+pca_scores_3d <- as_tibble(GSV_pca$x[, 1:3]) |>
+  bind_cols(gsv_advanced |> select(player, team, year) |> slice(1:nrow(GSV_pca$x)))
+
+plot_ly(pca_scores_3d, x = ~PC1, y = ~PC2, z = ~PC3,
+        color = ~team, text = ~player,
+        type = "scatter3d", mode = "markers") %>%
+  layout(title = "3D PCA of Golden State Valkyries Stats")
+
+#install.packages("GGally")
+library(GGally)
+pca_scores_df <- as_tibble(GSV_pca$x[, 1:5]) |>
+  bind_cols(gsv_advanced |> select(player, team, year) |> slice(1:nrow(GSV_pca$x)))
+
+ggpairs(pca_scores_df, columns = 1:5, aes(color = team))
+
+
+# Clustering:
+
+wnba_advanced |> 
+  ggplot(aes(x = e_fg_percent)) + 
+  geom_histogram() 
+
+
+wnba_advanced <- wnba_advanced |>
+  mutate(
+    std_per = as.numeric(scale(per, center = TRUE, scale = TRUE)),
+    std_e_fg_per = as.numeric(scale(e_fg_percent, center = TRUE, scale = TRUE))
+  )
+
+
+init_kmeans <- wnba_advanced |> 
+  select(std_per, std_e_fg_per) |> 
+  kmeans(algorithm = "Lloyd", centers = 4, nstart = 1)
+  
+  
+wnba_clustered <- wnba_advanced |> 
+  mutate(clusters = as.factor(init_kmeans$cluster))
+
+# K means clustering of WNBA 
+ggplot(wnba_clustered, aes(x = std_per, 
+                           y = std_e_fg_per, color = clusters)) +
+  geom_point(size = 3, alpha = 0.8) +
+  ggthemes::scale_color_colorblind(name = "Cluster") +
+  labs(
+    title = "K-means Clustering of WNBA Players 2025",
+    subtitle = "Clusters based on standardized PER and eFG%",
+    x = "Player Efficiency Rating (PER)",
+    y = "Effective Field Goal Percentage (eFG%)",
+    caption = "Data: basketball-reference.com | Clustering on scaled PER & eFG%"
+  ) +
+  theme_minimal(base_size = 14) +
+  coord_fixed(ratio = 1.5)
+
+
+
+# Convert centroids to a tibble and label them
+centroids <- as_tibble(init_kmeans$centers) |>
+  mutate(clusters = as.factor(1:n()))
+
+# Plot with centroids
+ggplot(wnba_clustered, aes(x = std_per, y = std_e_fg_per, color = clusters)) +
+  geom_point(size = 3, alpha = 0.7) +
+  geom_point(data = centroids, aes(x = std_per, y = std_e_fg_per),
+             shape = 4, size = 5, stroke = 2, color = "black") +
+  ggthemes::scale_color_colorblind(name = "Cluster") +
+  labs(
+    title = "K-means Clustering of WNBA Players 2025",
+    subtitle = "With Cluster Centroids (black X's)",
+    x = "Standardized PER",
+    y = "Standardized eFG%",
+    caption = "Data: basketball-reference.com | Clustering on scaled PER & eFG%"
+  ) +
+  theme_minimal(base_size = 14) +
+  coord_fixed(ratio = 1.5)
+
+
+
+#Adding names for the centriods
+
+# Step 1: Add cluster number and distances to centroids
+clustered_with_distance <- wnba_advanced |> 
+  select(player, std_per, std_e_fg_per) |> 
+  mutate(cluster = init_kmeans$cluster) |>
+  left_join(
+    as_tibble(init_kmeans$centers) |> 
+      mutate(cluster = 1:n()),
+    by = "cluster",
+    suffix = c("", "_centroid")
+  ) |>
+  mutate(
+    distance = sqrt((std_per - std_per_centroid)^2 + (std_e_fg_per - std_e_fg_per_centroid)^2)
+  )
+
+# Step 2: Get the closest player to each centroid
+representative_players <- clustered_with_distance |> 
+  group_by(cluster) |> 
+  slice_min(order_by = distance, n = 1, with_ties = FALSE) |> 
+  select(cluster, player, std_per, std_e_fg_per)
+
+print(representative_players)
+
+
+# Reuse centroids and clusters
+centroids <- as_tibble(init_kmeans$centers) |> 
+  mutate(cluster = as.factor(1:n())) |> 
+  left_join(representative_players |> mutate(cluster = as.factor(cluster)), by = "cluster")
+
+centroids <- centroids |> 
+  rename(
+    std_per = std_per.x,
+    std_e_fg_per = std_e_fg_per.x,
+    player_name = player
+  )
+
+
+ggplot(wnba_clustered, aes(x = std_per, y = std_e_fg_per, color = clusters)) +
+  geom_point(size = 3, alpha = 0.7) +
+  geom_point(data = centroids, aes(x = std_per, y = std_e_fg_per),
+             shape = 4, size = 5, stroke = 2, color = "black") +
+  ggrepel::geom_text_repel(data = centroids, aes(x = std_per, y = std_e_fg_per, label = player_name),
+                           color = "black", size = 5, fontface = "bold") +
+  ggthemes::scale_color_colorblind(name = "Cluster") +
+  labs(
+    title = "K-means Clustering of WNBA Players 2025",
+    subtitle = "Cluster centroids labeled with closest player",
+    x = "Standardized PER",
+    y = "Standardized eFG%",
+    caption = "Data: basketball-reference.com | Clustering on scaled PER & eFG%"
+  ) +
+  theme_minimal(base_size = 14) +
+  coord_fixed(ratio = 1.5)
+
+
+
+
+
+library(ggplot2)
+library(ggthemes)
+library(ggrepel)
+ggplot(wnba_clustered, aes(x = std_per, y = std_e_fg_per, color = clusters)) +
+  geom_point(size = 3, alpha = 0.5) +
+  
+  # Red centroid dots
+  geom_point(data = centroids, aes(x = std_per, y = std_e_fg_per),
+             shape = 21, fill = "red", color = "black", size = 5, stroke = 1.5) +
+  
+  # Transparent labels with smaller font
+  geom_label_repel(
+    data = centroids,
+    aes(x = std_per, y = std_e_fg_per, label = player_name),
+    fill = alpha("white", 0.4),   # fully transparent box
+    color = "black",
+    size = 3,                     # smaller text
+    fontface = "bold",
+    box.padding = 0.3,
+    label.size = NA              # remove label border
+  ) +
+  
+  ggthemes::scale_color_colorblind(name = "Cluster") +
+  labs(
+    title = "K-means Clustering of WNBA Players (2025)",
+    subtitle = "Red dots are centroids, labeled with closest player",
+    x = "Standardized PER",
+    y = "Standardized eFG%",
+    caption = "Data: basketball-reference.com | Clustering on scaled PER & eFG%"
+  ) +
+  theme_minimal(base_size = 14) +
+  coord_fixed(ratio = 1.5)
