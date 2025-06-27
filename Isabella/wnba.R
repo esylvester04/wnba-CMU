@@ -3,6 +3,9 @@ library(dplyr)
 library(janitor)
 library(lubridate)
 library(tidyverse)
+library(FactoMineR)
+library(factoextra)
+
 
 ######        Season Level Stats        ############
 
@@ -305,4 +308,98 @@ s_wnba_2025<- read_html(s_url_2025) %>%
 
 
 s_wnba<- bind_rows(s_wnba_2022,s_wnba_2023,s_wnba_2024,s_wnba_2025)
+
+########           Clustering  Player by Archetype     #########
+
+
+class(all_advanced$g)
+all_advanced <- all_advanced %>%
+  mutate(g = as.numeric(g))
+
+filtered_all_advanced <- all_advanced %>% filter(year != 2025) 
+
+filtered_all_advanced<- filtered_all_advanced %>% filter(g > 5)   
+
+filtered_all_advanced <- filtered_all_advanced %>% 
+  select(-g,-e_fg_percent, -orb_percent, -usg_percent, -dws,-ows,-ws_40, -x3p_ar,-f_tr,-d_rtg,-o_rtg, -year)
+
+scaled_players <- filtered_all_advanced %>%
+  select(-player, -team, -pos, -g,-e_fg_percent, -orb_percent, -usg_percent, -dws,-ows,-ws_40, -x3p_ar,-f_tr,-d_rtg,-o_rtg, -year) %>%
+  mutate(across(everything(), as.numeric)) %>% 
+  scale() # convert everything left to numeric 
+
+
+set.seed(42)
+player_kmeans <- kmeans(scaled_players, centers = 4, nstart = 25)
+filtered_all_advanced$player_type <- player_kmeans$cluster
+
+summary(scaled_players)
+
+fviz_nbclust(scaled_players, kmeans, method = "wss") +
+     labs(title = "Elbow Method for Optimal Number of Clusters")
+
+
+player_kmeans$centers
+
+fviz_cluster(player_kmeans, data = scaled_players) +
+  labs(title = "Player Clusters Visualization")
+
+
+
+pca_result <- PCA(scaled_players, graph = FALSE)
+fviz_screeplot(pca_result)  # to see how many PCs explain most variance
+
+
+colnames(scaled_players)
+
+#############       Booty Version of Clustering Teams not Player      ##########
+
+
+# # Convert everything except 'Team' to numeric
+# scaled_data <- t_all_advanced %>%
+#   select(-team, -year) %>%
+#   mutate(across(everything(), as.numeric)) %>%  # convert everything left to numeric
+#    scale()
+# # s_t_all_advanced <- t_all_advanced %>%
+# #   mutate(across(where(is.character), as.numeric))
+# # colname
+# t_all_advanced <- t_all_advanced %>%
+#   mutate(across(where(is.character) & !c(team, year), ~as.numeric(.)))
+# 
+# set.seed(123)
+# 
+# kmeans_result <- kmeans(scaled_data, centers = 4, nstart = 25)
+# t_all_advanced$cluster <- kmeans_result$cluster
+# 
+# # Average values of key stats per cluster
+# t_all_advanced %>%
+#   group_by(cluster) %>%
+#   summarise(across(c(w, n_rtg, o_rtg, d_rtg, made_playoffs), mean, na.rm = TRUE))
+# 
+# install.packages("factoextra")  # only if you haven’t yet
+# library(factoextra)
+# fviz_nbclust(scaled_data, kmeans, method = "wss") +
+#   labs(title = "Elbow Method for Optimal Number of Clusters")
+
+##############
+filtered_all_advanced <- filtered_all_advanced %>%
+  mutate(across(
+    -c(player_type, year, team, player, pos),  # keep non-numeric columns as-is
+    ~ as.numeric(.)
+  ))
+
+cluster_profiles <- filtered_all_advanced %>%
+  group_by(player_type) %>% 
+  summarise(across(where(is.numeric), mean, na.rm = TRUE)) %>%
+  arrange(player_type) 
+
+print(cluster_profiles)
+
+# 3 seems to be the best type of players
+# 4 "role players"
+# 1 shooters, they attempt more 3
+# 2 statistically are not contributing to wins 
+
+
+########       Clustering Players Archetype on Winning Teams      ###########
 
