@@ -324,7 +324,7 @@ filtered_all_advanced <- filtered_all_advanced %>%
   select(-g,-e_fg_percent, -orb_percent, -usg_percent, -dws,-ows,-ws_40, -x3p_ar,-f_tr,-d_rtg,-o_rtg, -year)
 
 scaled_players <- filtered_all_advanced %>%
-  select(-player, -team, -pos, -g,-e_fg_percent, -orb_percent, -usg_percent, -dws,-ows,-ws_40, -x3p_ar,-f_tr,-d_rtg,-o_rtg, -year) %>%
+  select(-player, -team, -pos) %>%
   mutate(across(everything(), as.numeric)) %>% 
   scale() # convert everything left to numeric 
 
@@ -384,9 +384,9 @@ colnames(scaled_players)
 ##############
 filtered_all_advanced <- filtered_all_advanced %>%
   mutate(across(
-    -c(player_type, year, team, player, pos),  # keep non-numeric columns as-is
+    -c(player_type, year, team, player, pos),
     ~ as.numeric(.)
-  ))
+   ))
 
 cluster_profiles <- filtered_all_advanced %>%
   group_by(player_type) %>% 
