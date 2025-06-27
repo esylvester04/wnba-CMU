@@ -4,43 +4,6 @@ library(janitor)
 library(lubridate)
 library(tidyverse)
 
-######        Season Level Stats        ############
-
-# url_2022<- "https://www.basketball-reference.com/wnba/years/2022_per_game.html"
-# 
-# wnba_2022<- read_html(url_2022) %>% 
-#   html_element("table.stats_table") %>% html_table()
-# 
-# wnba_2022 <- wnba_2022 %>% clean_names() %>% 
-#   select(-g_2, -mp_2, -gs, -pf)
-# 
-# 
-# url_2023 <- "https://www.basketball-reference.com/wnba/years/2023_per_game.html"
-# 
-# wnba_2023<- read_html(url_2023) %>% 
-#   html_element("table.stats_table") %>% html_table()
-# 
-# wnba_2023 <- wnba_2023 %>% clean_names() %>% 
-#   select(-g_2, -mp_2, -gs, -pf)
-# 
-# 
-# url_2024 <- "https://www.basketball-reference.com/wnba/years/2022_per_game.html"
-# 
-# wnba_2024<- read_html(url_2024) %>% 
-#   html_element("table.stats_table") %>% html_table()
-# 
-# wnba_2024 <- wnba_2024 %>% clean_names() %>% 
-#   select(-g_2, -mp_2, -gs, -pf)
-# 
-# 
-# url_2025<- "https://www.basketball-reference.com/wnba/years/2022_per_game.html"
-# 
-# wnba_2025<- read_html(url_2025) %>% 
-#   html_element("table.stats_table") %>% html_table()
-# 
-# wnba_2025 <- wnba_2025 %>% clean_names() %>% 
-#   select(-g_2, -mp_2, -gs, -pf)
-
 
 
 ##########        ADVANCED STATS   ###########
@@ -82,11 +45,6 @@ a_wnba_2025 <- a_wnba_2025 %>% clean_names() %>%
 
 
 #########           Adding a Year Column        #########
-
-# wnba_2022 <- wnba_2022 %>% mutate(year = 2022)
-# wnba_2023 <- wnba_2023 %>% mutate(year = 2023)
-# wnba_2024 <- wnba_2024 %>% mutate(year = 2024)
-# wnba_2025 <- wnba_2025 %>% mutate(year = 2025)
 
 a_wnba_2022 <- a_wnba_2022 %>% mutate(year = 2022)
 a_wnba_2023 <- a_wnba_2023 %>% mutate(year = 2023)
@@ -153,122 +111,122 @@ all_advanced <- bind_rows(single_or_no_trade, multi_rows_cleaned) %>%
 # table_ids <- tables %>% html_attr("id")
 # print(table_ids)
 
-
-#########        Team Data            ########
-
-t_url_2022<- "https://www.basketball-reference.com/wnba/years/2022.html"
-
-t_wnba_2022<- read_html(t_url_2022) %>% 
-  html_element("#per_game-team") %>% html_table() %>% clean_names()
-
-
-t_url_2023<- "https://www.basketball-reference.com/wnba/years/2023.html"
-
-t_wnba_2023<- read_html(t_url_2023) %>% 
-  html_element("#per_game-team") %>% html_table() %>% clean_names()
-
-
-t_url_2024<- "https://www.basketball-reference.com/wnba/years/2024.html"
-
-t_wnba_2024<- read_html(t_url_2024) %>% 
-  html_element("#per_game-team") %>% html_table()%>% clean_names()
-
-
-t_url_2025<- "https://www.basketball-reference.com/wnba/years/2025.html"
-
-t_wnba_2025<- read_html(t_url_2025) %>% 
-  html_element("#per_game-team") %>% html_table()%>% clean_names()
-
-
-#######       Advanced Team Stats         ######
-
-a_t_url_2022 <- "https://www.basketball-reference.com/wnba/years/2022.html"
-
-a_t_wnba_2022 <- read_html(a_t_url_2022) %>%
-  html_element("#advanced-team") %>%
-  html_table(header = FALSE) # Read the table WITHOUT headers
-
-colnames(a_t_wnba_2022) <- as.character(a_t_wnba_2022[2, ])
-
-# remove first two rows (the header rows)
-a_t_wnba_2022 <- a_t_wnba_2022[-c(1,2), ] %>% clean_names()
-
-
-a_t_url_2023 <- "https://www.basketball-reference.com/wnba/years/2023.html"
-
-a_t_wnba_2023 <- read_html(a_t_url_2023) %>%
-  html_element("#advanced-team") %>%
-  html_table(header = FALSE) # Read the table WITHOUT headers
-
-colnames(a_t_wnba_2023) <- as.character(a_t_wnba_2023[2, ])
-
-# remove first two rows (the header rows)
-a_t_wnba_2023 <- a_t_wnba_2023[-c(1,2), ] %>% clean_names()
-
-
-a_t_url_2024 <- "https://www.basketball-reference.com/wnba/years/2024.html"
-
-a_t_wnba_2024 <- read_html(a_t_url_2024) %>%
-  html_element("#advanced-team") %>%
-  html_table(header = FALSE) # Read the table WITHOUT headers
-
-colnames(a_t_wnba_2024) <- as.character(a_t_wnba_2024[2, ])
-
-# remove first two rows (the header rows)
-a_t_wnba_2024 <- a_t_wnba_2024[-c(1,2), ] %>% clean_names()
-
-
-a_t_url_2025 <- "https://www.basketball-reference.com/wnba/years/2025.html"
-
-a_t_wnba_2025 <- read_html(a_t_url_2025) %>%
-  html_element("#advanced-team") %>%
-  html_table(header = FALSE) # Read the table WITHOUT headers
-
-colnames(a_t_wnba_2025) <- as.character(a_t_wnba_2025[2, ])
-
-# remove first two rows (the header rows)
-a_t_wnba_2025 <- a_t_wnba_2025[-c(1,2), ] %>% clean_names()
-
-
-#########           Adding a Year Column & If made playoffs       #########
-
-t_wnba_2022 <- t_wnba_2022 %>% mutate(year = 2022)
-t_wnba_2023 <- t_wnba_2023 %>% mutate(year = 2023)
-t_wnba_2024 <- t_wnba_2024 %>% mutate(year = 2024)
-t_wnba_2025 <- t_wnba_2025 %>% mutate(year = 2025)
-
-a_t_wnba_2022 <- a_t_wnba_2022 %>% mutate(year = 2022)
-a_t_wnba_2023 <- a_t_wnba_2023 %>% mutate(year = 2023)
-a_t_wnba_2024 <- a_t_wnba_2024 %>% mutate(year = 2024)
-a_t_wnba_2025 <- a_t_wnba_2025 %>% mutate(year = 2025)
-
-
-
-#t_all_advanced <- t_all_advanced %>% mutate()
-
-
-
-#Las Vegace Aces, Conneticut Sun, Chicago Sky, Seattle Storm, 
-#New York Liberty, Dallas Wings, Phoenix Mercury, Washington Mystics
-
-
-
-
-
-
-
-
-#########          Stacking team sets together     #############
-
-t_all_advanced <- bind_rows( a_t_wnba_2022, a_t_wnba_2023, a_t_wnba_2024, a_t_wnba_2025) %>% 
-  select(-na_3,-na, -na_2, -arena)
-t_per_game <- bind_rows( t_wnba_2022, t_wnba_2023, t_wnba_2024, t_wnba_2025)
-
-#########         Removing League Avg. Rows       ###############
-
-t_all_advanced <- t_all_advanced[!t_all_advanced$team== "League Average",]
-
-t_per_game <- t_per_game[!t_per_game$team== "League Average",]
+# 
+# #########        Team Data            ########
+# 
+# t_url_2022<- "https://www.basketball-reference.com/wnba/years/2022.html"
+# 
+# t_wnba_2022<- read_html(t_url_2022) %>% 
+#   html_element("#per_game-team") %>% html_table() %>% clean_names()
+# 
+# 
+# t_url_2023<- "https://www.basketball-reference.com/wnba/years/2023.html"
+# 
+# t_wnba_2023<- read_html(t_url_2023) %>% 
+#   html_element("#per_game-team") %>% html_table() %>% clean_names()
+# 
+# 
+# t_url_2024<- "https://www.basketball-reference.com/wnba/years/2024.html"
+# 
+# t_wnba_2024<- read_html(t_url_2024) %>% 
+#   html_element("#per_game-team") %>% html_table()%>% clean_names()
+# 
+# 
+# t_url_2025<- "https://www.basketball-reference.com/wnba/years/2025.html"
+# 
+# t_wnba_2025<- read_html(t_url_2025) %>% 
+#   html_element("#per_game-team") %>% html_table()%>% clean_names()
+# 
+# 
+# #######       Advanced Team Stats         ######
+# 
+# a_t_url_2022 <- "https://www.basketball-reference.com/wnba/years/2022.html"
+# 
+# a_t_wnba_2022 <- read_html(a_t_url_2022) %>%
+#   html_element("#advanced-team") %>%
+#   html_table(header = FALSE) # Read the table WITHOUT headers
+# 
+# colnames(a_t_wnba_2022) <- as.character(a_t_wnba_2022[2, ])
+# 
+# # remove first two rows (the header rows)
+# a_t_wnba_2022 <- a_t_wnba_2022[-c(1,2), ] %>% clean_names()
+# 
+# 
+# a_t_url_2023 <- "https://www.basketball-reference.com/wnba/years/2023.html"
+# 
+# a_t_wnba_2023 <- read_html(a_t_url_2023) %>%
+#   html_element("#advanced-team") %>%
+#   html_table(header = FALSE) # Read the table WITHOUT headers
+# 
+# colnames(a_t_wnba_2023) <- as.character(a_t_wnba_2023[2, ])
+# 
+# # remove first two rows (the header rows)
+# a_t_wnba_2023 <- a_t_wnba_2023[-c(1,2), ] %>% clean_names()
+# 
+# 
+# a_t_url_2024 <- "https://www.basketball-reference.com/wnba/years/2024.html"
+# 
+# a_t_wnba_2024 <- read_html(a_t_url_2024) %>%
+#   html_element("#advanced-team") %>%
+#   html_table(header = FALSE) # Read the table WITHOUT headers
+# 
+# colnames(a_t_wnba_2024) <- as.character(a_t_wnba_2024[2, ])
+# 
+# # remove first two rows (the header rows)
+# a_t_wnba_2024 <- a_t_wnba_2024[-c(1,2), ] %>% clean_names()
+# 
+# 
+# a_t_url_2025 <- "https://www.basketball-reference.com/wnba/years/2025.html"
+# 
+# a_t_wnba_2025 <- read_html(a_t_url_2025) %>%
+#   html_element("#advanced-team") %>%
+#   html_table(header = FALSE) # Read the table WITHOUT headers
+# 
+# colnames(a_t_wnba_2025) <- as.character(a_t_wnba_2025[2, ])
+# 
+# # remove first two rows (the header rows)
+# a_t_wnba_2025 <- a_t_wnba_2025[-c(1,2), ] %>% clean_names()
+# 
+# 
+# #########           Adding a Year Column & If made playoffs       #########
+# 
+# t_wnba_2022 <- t_wnba_2022 %>% mutate(year = 2022)
+# t_wnba_2023 <- t_wnba_2023 %>% mutate(year = 2023)
+# t_wnba_2024 <- t_wnba_2024 %>% mutate(year = 2024)
+# t_wnba_2025 <- t_wnba_2025 %>% mutate(year = 2025)
+# 
+# a_t_wnba_2022 <- a_t_wnba_2022 %>% mutate(year = 2022)
+# a_t_wnba_2023 <- a_t_wnba_2023 %>% mutate(year = 2023)
+# a_t_wnba_2024 <- a_t_wnba_2024 %>% mutate(year = 2024)
+# a_t_wnba_2025 <- a_t_wnba_2025 %>% mutate(year = 2025)
+# 
+# 
+# 
+# #t_all_advanced <- t_all_advanced %>% mutate()
+# 
+# 
+# 
+# #Las Vegace Aces, Conneticut Sun, Chicago Sky, Seattle Storm, 
+# #New York Liberty, Dallas Wings, Phoenix Mercury, Washington Mystics
+# 
+# 
+# 
+# 
+# 
+# 
+# 
+# 
+# #########          Stacking team sets together     #############
+# 
+# t_all_advanced <- bind_rows( a_t_wnba_2022, a_t_wnba_2023, a_t_wnba_2024, a_t_wnba_2025) %>% 
+#   select(-na_3,-na, -na_2, -arena)
+# t_per_game <- bind_rows( t_wnba_2022, t_wnba_2023, t_wnba_2024, t_wnba_2025)
+# 
+# #########         Removing League Avg. Rows       ###############
+# 
+# t_all_advanced <- t_all_advanced[!t_all_advanced$team== "League Average",]
+# 
+# t_per_game <- t_per_game[!t_per_game$team== "League Average",]
 
 
 
@@ -330,7 +288,7 @@ gsv_advanced <- all_advanced |>
 View(gsv_advanced)
 
 # Prepare numeric matrix for PCA 
-pca_data <- gav_advanced |>
+pca_data <- gsv_advanced |>
   select(where(is.numeric), -year) |>
   scale()
 
@@ -338,10 +296,10 @@ pca_data <- gav_advanced |>
 GSV_pca <- prcomp(pca_data, center = TRUE, scale. = TRUE)
 
 # Add player info back
-GSV_pca_scores <- as_tibble(pca$x[, 1:2]) |>
+GSV_pca_scores <- as_tibble(GSV_pca$x[, 1:2]) |>
   bind_cols(gsv_advanced |>
               select(player, team, year) |>
-              slice(1:nrow(pca$x)))
+              slice(1:nrow(GSV_pca$x)))
 
 
 ggplot(GSV_pca_scores, aes(x = PC1, y = PC2)) +
@@ -467,6 +425,15 @@ ggplot(wnba_clustered, aes(x = std_per,
 
 
 
+# 
+# stars_advanced <-all_advanced |>
+#   filter(year )
+  
+
+
+
+
+
 # Convert centroids to a tibble and label them
 centroids <- as_tibble(init_kmeans$centers) |>
   mutate(clusters = as.factor(1:n()))
@@ -527,30 +494,8 @@ centroids <- centroids |>
   )
 
 
-ggplot(wnba_clustered, aes(x = std_per, y = std_e_fg_per, color = clusters)) +
-  geom_point(size = 3, alpha = 0.7) +
-  geom_point(data = centroids, aes(x = std_per, y = std_e_fg_per),
-             shape = 4, size = 5, stroke = 2, color = "black") +
-  ggrepel::geom_text_repel(data = centroids, aes(x = std_per, y = std_e_fg_per, label = player_name),
-                           color = "black", size = 5, fontface = "bold") +
-  ggthemes::scale_color_colorblind(name = "Cluster") +
-  labs(
-    title = "K-means Clustering of WNBA Players 2025",
-    subtitle = "Cluster centroids labeled with closest player",
-    x = "Standardized PER",
-    y = "Standardized eFG%",
-    caption = "Data: basketball-reference.com | Clustering on scaled PER & eFG%"
-  ) +
-  theme_minimal(base_size = 14) +
-  coord_fixed(ratio = 1.5)
 
-
-
-
-
-library(ggplot2)
 library(ggthemes)
-library(ggrepel)
 ggplot(wnba_clustered, aes(x = std_per, y = std_e_fg_per, color = clusters)) +
   geom_point(size = 3, alpha = 0.5) +
   
