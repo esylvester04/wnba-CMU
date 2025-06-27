@@ -312,13 +312,57 @@ all_advanced |>
        color = "Statistic") +
   theme_minimal()
 
-
+# PCA:
 # group by team, clustering analysis for positions on a single team
 
+library(cluster)
+library(factoextra)
+library(ggrepel)
+
+# Clean version of all_advanced — tidyverse style
+all_advanced_clean <- all_advanced |> 
+  mutate(across(c("g":"ws_40"),
+                as.numeric)) |>
+  filter(team == "GSV") |>  
+  drop_na() |>
+  clean_names()
+
+View(all_advanced_clean)
+
+# Prepare numeric matrix for PCA 
+pca_data <- all_advanced_clean |>
+  select(where(is.numeric), -year) |>
+  scale()
+
+# Run PCA
+pca <- prcomp(pca_data, center = TRUE, scale. = TRUE)
+
+# Add player info back
+pca_scores <- as_tibble(pca$x[, 1:2]) |>
+  bind_cols(all_advanced_clean |>
+              select(player, team, year) |>
+              slice(1:nrow(pca$x)))
+
+
+ggplot(pca_scores, aes(x = PC1, y = PC2)) +
+  geom_point(alpha = 0.7) +
+  labs(title = "PCA of Golden State Valkyeries Advanced Stats (first 15 games)",
+       subtitle = "First two principal components",
+       x = "PC1",
+       y = "PC2") +
+  theme_minimal()
 
 
 
+fviz_pca_biplot(pca,
+                label = "var",          # label variables (stats)
+                alpha.ind = 0.25,       # transparency of points (players)
+                alpha.var = 0.75,       # transparency of variable arrows
+                labelsize = 5,          # size of variable labels
+                col.var = "darkblue",   # color of variable arrows and labels
+                repel = TRUE)           # avoid overlapping labels
 
 
+# How many pcas should we use?
 
 
