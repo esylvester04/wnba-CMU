@@ -452,7 +452,18 @@ a_wnba_2025_u <- bind_rows(single_or_no_trades, multi_rows_cleaneds) %>%
   arrange(player, year)
 
 salary_recent <- wnba_salaries %>% filter(Year == 2025)
+salary_cleaned <- salary_recent %>%
+  distinct(Player, Year, .keep_all = TRUE)
 
-salary_stat <- left_join(a_wnba_2025_u, salary_recent, by = c("player" = "Player"))
+a_wnba_2025_u <- a_wnba_2025_u %>%
+  mutate(player = str_trim(player))
+
+salary_cleaned <- salary_cleaned %>%
+  mutate(Player = str_trim(Player))
+
+
+salary_stat <- left_join(a_wnba_2025_u, salary_cleaned, by = c("player" = "Player"))
+
+
 
 
