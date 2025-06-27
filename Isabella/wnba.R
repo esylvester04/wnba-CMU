@@ -252,12 +252,6 @@ a_t_wnba_2025 <- a_t_wnba_2025 %>% mutate(year = 2025)
 #New York Liberty, Dallas Wings, Phoenix Mercury, Washington Mystics
 
 
-
-
-
-
-
-
 #########          Stacking team sets together     #############
 
 t_all_advanced <- bind_rows( a_t_wnba_2022, a_t_wnba_2023, a_t_wnba_2024, a_t_wnba_2025) %>% 
@@ -270,11 +264,45 @@ t_all_advanced <- t_all_advanced[!t_all_advanced$team== "League Average",]
 
 t_per_game <- t_per_game[!t_per_game$team== "League Average",]
 
+##########      Adding Playoff Column         #########
 
+t_all_advanced <- t_all_advanced %>%
+  mutate(
+    made_playoffs = if_else(grepl("\\*$", team), 1, 0),
+    team = gsub("\\*$", "", team)  # optional: remove * from name
+  )
+
+t_per_game <- t_per_game %>%
+  mutate(
+    made_playoffs = if_else(grepl("\\*$", team), 1, 0),
+    team = gsub("\\*$", "", team)  # optional: remove * from name
+  )
 
 #########         Salary Data         ############
 
+s_url_2022 <- "https://herhoopstats.com/salary-cap-sheet/wnba/players/salary_2022/stats_2024/?stats_to_show=per_game&stat_to_show=pts_per_game"
+
+s_wnba_2022<- read_html(s_url_2022) %>% 
+  html_element("table.salary-stat") %>% html_table() %>% select(Player, `2022 Salary`, `2022 Signing`)
 
 
+s_url_2023 <- "https://herhoopstats.com/salary-cap-sheet/wnba/players/salary_2023/stats_2024/?stats_to_show=per_game&stat_to_show=pts_per_game"
 
+s_wnba_2023<- read_html(s_url_2023) %>% 
+  html_element("table.salary-stat") %>% html_table()%>% select(Player, `2023 Salary`, `2023 Signing`)
+
+
+s_url_2024 <- "https://herhoopstats.com/salary-cap-sheet/wnba/players/salary_2024/stats_2024/?stats_to_show=per_game&stat_to_show=pts_per_game"
+
+s_wnba_2024<- read_html(s_url_2024) %>% 
+  html_element("table.salary-stat") %>% html_table() %>% select(Player, `2024 Salary`, `2024 Signing`)
+
+
+s_url_2025 <- "https://herhoopstats.com/salary-cap-sheet/wnba/players/salary_2025/stats_2024/?stats_to_show=per_game&stat_to_show=pts_per_game"
+
+s_wnba_2025<- read_html(s_url_2025) %>% 
+  html_element("table.salary-stat") %>% html_table() %>% select(Player, `2025 Salary`, `2025 Signing`)
+
+
+s_wnba<- bind_rows(s_wnba_2022,s_wnba_2023,s_wnba_2024,s_wnba_2025)
 
