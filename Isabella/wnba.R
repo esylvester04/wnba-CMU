@@ -7,6 +7,7 @@ library(FactoMineR)
 library(factoextra)
 library(tidyr)
 library(ggplot2)
+library(broom)
 
 ######        Season Level Stats        ############
 
@@ -571,13 +572,45 @@ team_archetype_summary <- team_cluster_counts %>%
   pivot_wider(names_from = player_type, values_from = total_mp, values_fill = 0, names_prefix = "type") %>%
   left_join(team_win_data, by = c("team", "year"))
 
-# Example regression model
+
+
+######      This is a linear regression that estimates how a team’s win percentage is     ###########
+#####  affected by the number of total minutes played by players of each cluster (player type).###########
+
 win_model <- lm(win_pct ~ type1 + type2 + type3 + type4, data = team_archetype_summary)
 summary(win_model)
 
+# Why This Model Is Useful
+# Quantifies Impact of Player Archetypes
+# Helps you identify which player types (e.g., “glue players” or “stars”) actually drive winning.
+# Informs Expansion Draft Strategy
+# You can prioritize selecting players from clusters that the model shows have a positive correlation with team success.
+# Validates Your Clustering
+# If Type 3 has a strong positive coefficient, then you know your clustering effectively found a winning player archetype.
+# Builds a Blueprint for a Winning Roster
+# Instead of just picking the best available player, you can simulate how adding X minutes of Type 3 and Y minutes of Type 4 affects your team’s projected win %.
+# 
 
-library(tidyr)
-library(dplyr)
+
+tidy(win_model) %>%
+  filter(term != "(Intercept)") %>%
+  ggplot(aes(x = term, y = estimate)) +
+  geom_col(fill = "steelblue") +
+  geom_hline(yintercept = 0, linetype = "dashed") +
+  labs(title = "Estimated Impact of Player Types on Win Percentage",
+       x = "Player Type", y = "Estimated Coefficient") +
+  theme_minimal()
+
+model_data$predicted_win_pct <- predict(win_model)
+#Predicted vs. Actual Win %
+ggplot(model_data, aes(x = win_pct, y = predicted_win_pct)) +
+  geom_point() +
+  geom_abline(linetype = "dashed", color = "gray") +
+  labs(title = "Actual vs Predicted Win %", x = "Actual", y = "Predicted") +
+  theme_minimal()
+
+
+########. 
 
 model_data <- team_cluster_counts %>%
   select(team, year, player_type, total_mp) %>%
@@ -591,4 +624,58 @@ model_data <- team_cluster_counts %>%
     t_all_advanced %>% select(team, year, win_pct),
     by = c("team", "year")
   )
+
+
+
+
+#type 3 is the best, you can see teams with type 3 players that play a lot of minutes
+#have the best win pct
+
+# Step-by-Step: Simulate Protected Players
+# 🔹 Step 1: Rank players within each team-year
+# 
+# We’ll assume teams protect players who:
+#   
+#   Played a lot of minutes
+# Had a strong PER
+# You can create a composite score:
+
+protected_candidates <- filtered_all_advanced %>%
+  group_by(team, year) %>%
+  mutate(per_minute_score = scale(ws) + scale(mp)) %>%  # combines impact and playing time
+  arrange(team, year, desc(per_minute_score)) %>%
+  mutate(rank_within_team = row_number())
+
+protected_candidates <- protected_candidates %>%
+  mutate(protected = if_else(rank_within_team <= 5, 1, 0))
+
+
+
+
+####### This is the model for only the 2025 year
+
+players_2025 <- all_advanced %>%
+  filter(year == 2025)  
+
+players_2025 <- players_2025 %>%
+  mutate(
+    mp = as.numeric(mp),
+    ws = as.numeric(ws),
+    per = as.numeric(per)
+  )
+
+players_2025 <- players_2025 %>%
+  group_by(team) %>%
+  mutate(per_minute_score = scale(mp) + scale(ws)) %>%
+  arrange(team, desc(per_minute_score)) %>%
+  mutate(rank_within_team = row_number(),
+         protected = if_else(rank_within_team <= 5, 1, 0)) %>%
+  ungroup()
+
+protected_2025 <- players_2025 %>%
+  filter(protected == 1) %>%
+  select(team, player, mp, per, protected) %>%
+  arrange(team)
+
+
 
