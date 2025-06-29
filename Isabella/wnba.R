@@ -293,23 +293,19 @@ t_per_game <- t_per_game %>%
 # s_wnba_2024<- read_html(s_url_2024) %>% 
 #   html_element("table.salary-stat") %>% html_table() %>% select(Player, `2024 Salary`, `2024 Signing`)
 
-
-s_url_2025 <- "https://herhoopstats.com/salary-cap-sheet/wnba/players/salary_2025/stats_2024/?stats_to_show=per_game&stat_to_show=pts_per_game"
-
-s_wnba_2025<- read_html(s_url_2025) %>% 
-  html_element("table.salary-stat") %>% html_table() %>% select(Player, `2025 Salary`, `2025 Signing`)
+# 
+# s_url_2025 <- "https://herhoopstats.com/salary-cap-sheet/wnba/players/salary_2025/stats_2024/?stats_to_show=per_game&stat_to_show=pts_per_game"
+# 
+# s_wnba_2025<- read_html(s_url_2025) %>% 
+#   html_element("table.salary-stat") %>% html_table() %>% select(Player, `2025 Salary`, `2025 Signing`)
 
 
 # s_wnba<- bind_rows(s_wnba_2022,s_wnba_2023,s_wnba_2024,s_wnba_2025)
 
 
 
-########       Comnbining Datasets    ###########
-
-
-
+########       Combining Datasets    ###########
 wnba_salaries <- read_csv("WNBA Salaries 2.csv")
-
 
 multi_rows <- a_wnba_2025 %>%
   group_by(player, year) %>%
@@ -344,6 +340,8 @@ single_or_no_trades <- a_wnba_2025 %>%
 # Step 6: Combine everything
 a_wnba_2025_u <- bind_rows(single_or_no_trades, multi_rows_cleaneds) %>%
   arrange(player, year)
+
+
 
 salary_recent <- wnba_salaries %>% filter(Year == 2025)
 salary_cleaned <- salary_recent %>%
@@ -523,8 +521,6 @@ ggplot(team_cluster_counts, aes(x = player_type, y = total_mp, fill = factor(pla
 
 
 #############################################
-
-
 t_all_advanced <- t_all_advanced %>%
   mutate(
     w = as.numeric(w),  # ensure both columns are numeric
@@ -601,16 +597,7 @@ tidy(win_model) %>%
        x = "Player Type", y = "Estimated Coefficient") +
   theme_minimal()
 
-model_data$predicted_win_pct <- predict(win_model)
-#Predicted vs. Actual Win %
-ggplot(model_data, aes(x = win_pct, y = predicted_win_pct)) +
-  geom_point() +
-  geom_abline(linetype = "dashed", color = "gray") +
-  labs(title = "Actual vs Predicted Win %", x = "Actual", y = "Predicted") +
-  theme_minimal()
 
-
-########. 
 
 model_data <- team_cluster_counts %>%
   select(team, year, player_type, total_mp) %>%
@@ -624,6 +611,18 @@ model_data <- team_cluster_counts %>%
     t_all_advanced %>% select(team, year, win_pct),
     by = c("team", "year")
   )
+
+
+model_data$predicted_win_pct <- predict(win_model)
+#Predicted vs. Actual Win %
+ggplot(model_data, aes(x = win_pct, y = predicted_win_pct)) +
+  geom_point() +
+  geom_abline(linetype = "dashed", color = "gray") +
+  labs(title = "Actual vs Predicted Win %", x = "Actual", y = "Predicted") +
+  theme_minimal()
+
+
+########. 
 
 
 
