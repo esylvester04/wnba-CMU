@@ -401,7 +401,7 @@ star_players <- c("Breanna Stewart", "A'ja Wilson", "Sabrina Ionescu",
                   "Caitlin Clark", "Paige Bueckers", "Angel Reese", 
                   "Hailey Van Lith", "Kelsey Plum", "Napheesa Collier", 
                   "Sabrina Ionescu", "Jonquel Jones", "Aliyah Boston", 
-                  "Kamilla Cardoso", "Brittney Griner")
+                  "Kamilla Cardoso", "Brittney Griner", "Allisha Gray")
 
 # 2. Add label column
 wnba_pca_scores <- wnba_pca_scores |> 
@@ -591,6 +591,8 @@ centroids <- centroids |>
   )
 
 
+#sensitivity analysis on how tings change based on how many years of data you include
+
 
 library(ggthemes)
 ggplot(wnba_clustered, aes(x = std_per, y = std_e_fg_per, color = clusters)) +
@@ -622,3 +624,10 @@ ggplot(wnba_clustered, aes(x = std_per, y = std_e_fg_per, color = clusters)) +
   ) +
   theme_minimal(base_size = 14) +
   coord_fixed(ratio = 1.5)
+
+
+wnba_salaries <- read_csv("wnba_salaries.csv")
+salaries_25 <- wnba_salaries |>
+  filter(year == 2025) 
+
+
