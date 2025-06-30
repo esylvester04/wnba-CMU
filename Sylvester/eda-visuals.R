@@ -439,9 +439,7 @@ salary_stat %>%
 salary_stat <- left_join(salary_stat, wnba_2025_u, by = c("player" = "player"))
 
 salary_stat <- salary_stat |>
-  mutate(per = as.numeric(per))  # convert back after join
-
-
+  mutate(per = as.numeric(per)) # convert back after join
 
 
 library(scales)
@@ -460,6 +458,9 @@ ggplot(salary_stat, aes(x = per, y = salary_clean)) +
 
 
 
+
+
+
 model <- lm(salary_clean ~ per, data = salary_stat)
 salary_stat <- salary_stat %>%
   mutate(predicted_salary = predict(model, .),
@@ -471,14 +472,14 @@ library(ggrepel)
 
 ggplot(salary_stat, aes(x = per, y = salary_clean)) +
   geom_point(aes(color = undervalued), alpha = 0.7, size = 3) +
-  geom_label_repel(data = filter(salary_stat, undervalued),
-                   aes(label = str_to_title(player)),
-                   size = 3,
-                   fill = alpha("white", 0.8),
-                   box.padding = 0.4,
-                   point.padding = 0.2,
-                   segment.color = "gray50") +
-  geom_smooth(method = "lm", se = FALSE, linetype = "dashed", color = "gray30") +
+  # geom_label_repel(data = filter(salary_stat, undervalued),
+  #                  aes(label = str_to_title(player)),
+  #                  size = 3,
+  #                  fill = alpha("white", 0.8),
+  #                  box.padding = 0.4,
+  #                  point.padding = 0.2,
+  #                  segment.color = "gray50") +
+  geom_smooth(method = "lm", se = TRUE, linetype = "dashed", color = "gray30") +
   scale_color_manual(values = c("TRUE" = "#33a02c", "FALSE" = "#1f78b4"), guide = "none") +
   scale_y_continuous(labels = scales::dollar_format(scale = 1)) +
   scale_x_continuous(breaks = seq(0, 35, by = 5), limits = c(0, 35)) +
@@ -490,6 +491,17 @@ ggplot(salary_stat, aes(x = per, y = salary_clean)) +
     caption = "Source: Basketball-Reference & Her Hoop Stats"
   ) +
   theme_minimal(base_size = 14)
+
+
+
+
+
+
+
+
+
+
+
 
 
 salary_stat <- salary_stat %>%
@@ -615,6 +627,12 @@ ggplot(salary_stat, aes(x = per, y = salary_clean)) +
 
 
 
+
+
+
+
+
+
 ggplot(salary_stat, aes(x = per, y = salary_clean)) +
   # Highlight rookie salary range with background color
   annotate("rect",
@@ -624,12 +642,12 @@ ggplot(salary_stat, aes(x = per, y = salary_clean)) +
   
   # Main scatterplot
   geom_point(alpha = 0.7, size = 3, color = "#1f78b4") +
-  geom_point(data = underpaid, color = "red", size = 3) +
-  geom_point(data = top_paid, color = "green", size = 3) +
-  geom_point(data = star_players_df, color = "green", size = 3) +
+  # geom_point(data = underpaid, color = "red", size = 3) +
+  # geom_point(data = top_paid, color = "green", size = 3) +
+  # geom_point(data = star_players_df, color = "green", size = 3) +
   
   # Labels for key players
-  geom_label_repel(data = highlight_all,
+  geom_label_repel(data = salary_stat,
                    aes(label = player),
                    size = 3,
                    box.padding = 0.3,
@@ -664,6 +682,204 @@ ggplot(salary_stat, aes(x = per, y = salary_clean)) +
   ) +
   coord_cartesian(xlim = c(0, 50)) +  # Added space on right for labels
   theme_classic(base_size = 14)
+
+
+
+#####################################################################################################################
+##############################################################################
+
+# Assuming salary_stat has up-to-date PER values
+top15_per <- salary_stat %>%
+  arrange(desc(per)) %>%
+  slice_head(n = 15)
+
+ggplot(salary_stat, aes(x = per, y = salary_clean)) +
+  # Rookie range
+  annotate("rect",
+           xmin = -Inf, xmax = Inf,
+           ymin = 66000, ymax = 78000,
+           fill = "red", alpha = 0.15) +
+  
+  geom_point(alpha = 0.7, size = 3, color = "#1f78b4") +
+  
+  # Label only top 15 players by PER
+  geom_label_repel(
+    data = top15_per,
+    aes(label = player),
+    size = 3,
+    box.padding = 0.3,
+    point.padding = 0.2,
+    segment.color = "gray50",
+    max.overlaps = 20
+  ) +
+  
+  # Salary thresholds
+  geom_hline(yintercept = 65000,  linetype = "dashed", color = "red",   alpha = 0.5) +
+  geom_hline(yintercept = 80000,  linetype = "dashed", color = "red",   alpha = 0.5) +
+  geom_hline(yintercept = 208000, linetype = "dashed", color = "green") +
+  geom_hline(yintercept = 242000, linetype = "dashed", color = "blue") +
+  
+  # Range annotations
+  geom_label(aes(x = max(salary_stat$per) + 5, y = 80000,
+                 label = "Rookie Salary Range\n($66k–$78k)"),
+             fill = "white", label.size = 0.2, size = 3, hjust = 0, alpha = 0.3) +
+  geom_label(aes(x = max(salary_stat$per) + 5, y = 190000,
+                 label = "Regular Max Salary\n($208k)"),
+             fill = "white", label.size = 0.2, size = 3, hjust = 0) +
+  geom_label(aes(x = max(salary_stat$per) + 5, y = 242000,
+                 label = "Supermax Salary\n($242k)"),
+             fill = "white", label.size = 0.2, size = 3, hjust = 0, color = "blue") +
+  
+  labs(
+    title = "Top 15 WNBA Players by PER (2025) vs. Salary",
+    x = "Player Efficiency Rating (PER)",
+    y = "Salary (USD)",
+    caption = "Labels: Top 15 PER | Source: Basketball‑Reference & Her Hoop Stats"
+  ) +
+  scale_y_continuous(labels = scales::dollar_format(),
+                     breaks = seq(0, 300000, by = 40000)) +
+  scale_x_continuous(breaks = seq(0, 35, by = 5),
+                     limits = c(0, max(salary_stat$per) + 10)) +
+  theme_classic(base_size = 14)
+
+
+
+
+
+
+###########################################################################################
+
+
+
+# Define the nine star players to highlight
+star_players <- c(
+  "caitlin clark", "arike ogunbowale", "a'ja wilson",
+  "breanna stewart", "aliyah boston", "sabrina ionescu",
+  "napheesa collier", "paige bueckers", "kelsey plum"
+)
+
+# Filter the data for labeling
+star_df <- salary_stat %>% filter(player %in% star_players)
+
+
+star_df <-star_df <- star_df %>%
+  mutate(
+    nudge_x = case_when(
+      player == "arike ogunbowale"  ~ -2,
+      # player == "a'ja wilson"       ~ 1,
+      # player == "breanna stewart"   ~ 2,
+      # player == "aliyah boston"     ~ -3,
+      # player == "sabrina ionescu"   ~ 1.5,
+      player == "napheesa collier"  ~ 10,
+      player == "paige bueckers"    ~ 10,
+      player == "kelsey plum"       ~ -20,
+      TRUE                         ~ 0
+    ),
+    nudge_y = case_when(
+      player == "arike ogunbowale"  ~ -5,
+      # player == "a'ja wilson"       ~ 10,
+      # player == "breanna stewart"   ~ 7,
+      # player == "aliyah boston"     ~ -8,
+      player == "sabrina ionescu"   ~ 10,
+      player == "napheesa collier"  ~ -5,
+      player == "paige bueckers"    ~ 30,
+      player == "kelsey plum"       ~ 10,
+      TRUE                         ~ 0
+    )
+  )
+
+
+ggplot(salary_stat, aes(x = per, y = salary_clean)) +
+  # Highlight rookie salary range
+  annotate("rect",
+           xmin = -Inf, xmax = Inf,
+           ymin = 66000, ymax = 78000,
+           fill = "red", alpha = 0.15) +
+  
+  # Base scatter
+  geom_point(alpha = 0.7, size = 3, color = "#1f78b4") +
+  
+  # Label only specified stars
+  geom_label_repel(
+    data = star_df,
+    aes(label = player),
+    size = 3.5,
+    box.padding = 0.3,
+    point.padding = 0.2,
+    segment.color = "gray50",
+    segment.size = 0.7,
+    min.segment.length = 0,
+    direction = "y", # prefer vertical adjustment to avoid overlap
+    alpha = 0.7
+  ) +
+
+  
+  # Lines at key salary thresholds
+  geom_hline(yintercept = 66000,  linetype = "dashed", color = "red", alpha = 0.5) +
+  geom_hline(yintercept = 78000,  linetype = "dashed", color = "red", alpha = 0.5) +
+  geom_hline(yintercept = 214000, linetype = "dashed", color = "green") +
+  geom_hline(yintercept = 250000, linetype = "dashed", color = "blue") +
+  
+  # Annotate salary ranges on the right
+  # geom_label(aes(x = max(salary_stat$per) + 5, y = 80000,
+  #                label = "Rookie Salary Range\n($66k–$78k)"),
+  #            fill = "white", label.size = 0.2, size = 3, hjust = 0, alpha = 0.3) +
+  # geom_label(aes(x = max(salary_stat$per) + 5, y = 190000,
+  #                label = "Regular Max Salary\n($208k)"),
+  #            fill = "white", label.size = 0.2, size = 3, hjust = 0) +
+  # geom_label(aes(x = max(salary_stat$per) + 5, y = 242000,
+  #                label = "Supermax Salary\n($242k)"),
+  #            fill = "white", label.size = 0.2, size = 3, hjust = 0, color = "blue") +
+  
+  # Titles and formatting
+  labs(
+    title = "Player Efficiency vs WNBA Salary 2025",
+    x = "Player Efficiency Rating (PER)",
+    y = "Salary (USD)",
+  ) +
+  scale_y_continuous(labels = dollar_format(),
+                     breaks = seq(0, 300000, by = 40000)) +
+  scale_x_continuous(breaks = seq(0, max(salary_stat$per) + 5, by = 5),
+                     limits = c(0, max(salary_stat$per) + 10)) +
+  theme_classic(base_size = 14) +
+  theme(
+    plot.title = element_text(face = "bold", size = 18),
+    plot.subtitle = element_text(size = 12, margin = margin(b = 10)),
+    axis.title = element_text(face = "bold")
+  )
+
+
+
+
+
+ggplot(salary_stat, aes(x = per, y = salary_clean)) +
+  
+  # Base scatter
+  geom_point(alpha = 0.7, size = 3, color = "#1f78b4") +
+  geom_smooth(method = lm, se = TRUE, color = "black", line = "dashed") +
+  labs(
+    title = "Player Efficiency vs WNBA Salary 2025",
+    x = "Player Efficiency Rating (PER)",
+    y = "Salary (USD)",
+  ) +
+  scale_y_continuous(labels = dollar_format(),
+                     breaks = seq(0, 300000, by = 40000)) +
+  scale_x_continuous(breaks = seq(0, max(salary_stat$per), by = 5),
+                     limits = c(0, max(salary_stat$per) + 10)) +
+  theme_classic(base_size = 14) +
+  theme(
+    plot.title = element_text(face = "bold", size = 18),
+    plot.subtitle = element_text(size = 12, margin = margin(b = 10)),
+    axis.title = element_text(face = "bold")
+  )
+
+
+
+
+
+
+
+
 
 
 
@@ -783,13 +999,13 @@ p <- ggplot(salary_stat, aes(x = per, y = salary_clean,
   # Main scatterplot
   geom_point(alpha = 0.7, size = 3, color = "#1f78b4") +
   
-  # Threshold annotations
-  annotate("text", x = 28, y = 73000, label = "Rookie Range\n($66k–$78k)",
-           size = 4, hjust = 0, color = "red", fontface = "bold") +
-  annotate("text", x = 5, y = regular_max + 6000, label = "Regular Max\n($214k)",
-           size = 4, hjust = 0, color = "green", fontface = "bold") +
-  annotate("text", x = 5, y = supermax + 6000, label = "Supermax\n($249k)",
-           size = 4, hjust = 0, color = "blue", fontface = "bold") +
+  # # Threshold annotations
+  # annotate("text", x = 28, y = 73000, label = "Rookie Range\n($66k–$78k)",
+  #          size = 4, hjust = 0, color = "red", fontface = "bold") +
+  # annotate("text", x = 5, y = regular_max + 6000, label = "Regular Max\n($214k)",
+  #          size = 4, hjust = 0, color = "green", fontface = "bold") +
+  # annotate("text", x = 5, y = supermax + 6000, label = "Supermax\n($249k)",
+  #          size = 4, hjust = 0, color = "blue", fontface = "bold") +
   
   # Threshold lines
   geom_hline(yintercept = rookie_min, linetype = "dashed", color = "red", alpha = 0.5) +

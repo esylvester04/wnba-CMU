@@ -437,6 +437,44 @@ salary_stat <- salary_stat |>
 
 
 
+class(all_advanced$g)
+all_advanced <- all_advanced %>%
+  mutate(g = as.numeric(g))
+
+filtered_all_advanced <- all_advanced %>% filter(year != 2025) 
+
+filtered_all_advanced<- filtered_all_advanced %>% filter(g > 5)   
+
+filtered_all_advanced <- filtered_all_advanced %>% 
+  select(-g,-e_fg_percent, -orb_percent, -usg_percent, -dws,-ows,-ws_40, -x3p_ar,-f_tr,-d_rtg,-o_rtg)
+
+
+# Convert all non-ID columns to numeric safely
+filtered_all_advanced <- filtered_all_advanced %>%
+  mutate(across(
+    -c(player, year, team, pos),  # leave these as-is
+    ~ as.numeric(as.character(.))              # ensures factors/characters become numeric
+  ))
+
+# Optional: Remove rows with any NAs
+filtered_all_advanced <- filtered_all_advanced %>%
+  drop_na()
+
+# Start from filtered_all_advanced (already cleaned and numeric-converted earlier)
+# Select only numeric columns for clustering
+scaled_players <- filtered_all_advanced %>%
+  select(where(is.numeric)) %>%      # keep numeric columns only
+  drop_na() %>%                      # drop rows with NA values
+  scale() %>%                        # scale the numeric values
+  as.data.frame()                    # turn back into data.frame
+
+library(readr)  # for parse_number
+
+salary_stat <- salary_stat %>%
+  mutate(Salary = parse_number(Salary))  # strips "$" and "," and converts to numeric
+
+
+
 ggplot(salary_stat, aes(x = per, y = Salary)) +
   geom_point(alpha = 0.7, color = "#1f78b4") +
   labs(
