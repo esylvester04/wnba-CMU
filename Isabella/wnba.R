@@ -677,4 +677,44 @@ protected_2025 <- players_2025 %>%
   arrange(team)
 
 
+players_2024 <- all_advanced %>%
+  filter(year == 2024)  
+
+players_2024 <- players_2024 %>%
+  mutate(
+    mp = as.numeric(mp),
+    ws = as.numeric(ws),
+    per = as.numeric(per)
+  )
+
+players_2024 <- players_2024 %>%
+  group_by(team) %>%
+  mutate(per_minute_score = scale(mp) + scale(ws)) %>%
+  arrange(team, desc(per_minute_score)) %>%
+  mutate(rank_within_team = row_number(),
+         protected = if_else(rank_within_team <= 5, 1, 0)) %>%
+  ungroup()
+
+protected_2024 <- players_2024 %>%
+  filter(protected == 1) %>%
+  select(team, player, mp, per, protected) %>%
+  arrange(team)
+
+
+library(ggplot2)
+
+ggplot(protected_2024, aes(x = reorder(player, -per), y = per, fill = team)) +
+  geom_bar(stat = "identity") +
+  facet_wrap(~ team, scales = "free_x") +
+  theme_minimal() +
+  labs(
+    title = "Protected Players by Team (2024)",
+    subtitle = "Top 5 per team based on scaled MP + WS",
+    x = "Player",
+    y = "Player Efficiency Rating (PER)"
+  ) +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    legend.position = "none"
+  )
 
