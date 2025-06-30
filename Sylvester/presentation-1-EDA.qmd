@@ -35,18 +35,6 @@ source("eda-salary-plot.R")
 make_salary_plot2()
 ```
 
-## 
-```{r}
-#| echo: false
-#| fig-width: 10
-#| fig-height: 6
-
-#Source the plot function
-source("eda-salary-plot.R")
-
-# Draw the plot
-model_plot()
-```
 
 ## Methods
 
