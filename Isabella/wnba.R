@@ -347,6 +347,7 @@ salary_recent <- wnba_salaries %>% filter(Year == 2025)
 salary_cleaned <- salary_recent %>%
   distinct(Player, Year, .keep_all = TRUE)
 
+library(stringi)
 
 a_wnba_2025_u <- a_wnba_2025_u %>%
   mutate(player = stri_trans_general(player, "Latin-ASCII"),
@@ -438,6 +439,17 @@ salary_stat %>%
 salary_stat <- left_join(salary_stat, wnba_2025_u, by = c("player" = "player"))
 
 ##########
+fviz_contrib(pca_result, choice = "var", axes = 1)  # for PC1
+fviz_contrib(pca_result, choice = "var", axes = 2)  # for PC2
+
+pca_result$var$coord  # PC loadings: how much each stat contributes to each PC
+
+
+fviz_cluster(player_kmeans, data = scaled_players) +
+  labs(title = "Player Clusters Visualization")
+
+fviz_cluster(player_kmeans, data = scaled_players)
+
 
 class(all_advanced$g)
 all_advanced <- all_advanced %>%
@@ -484,6 +496,7 @@ cluster_profiles <- filtered_all_advanced %>%
   arrange(player_type) 
 
 print(cluster_profiles)
+
 
 ###############################
 
@@ -676,7 +689,7 @@ protected_2025 <- players_2025 %>%
   select(team, player, mp, per, protected) %>%
   arrange(team)
 
-
+########## players in the 2024 year #####
 players_2024 <- all_advanced %>%
   filter(year == 2024)  
 
@@ -717,4 +730,133 @@ ggplot(protected_2024, aes(x = reorder(player, -per), y = per, fill = team)) +
     axis.text.x = element_text(angle = 45, hjust = 1),
     legend.position = "none"
   )
+
+team_cluster_counts <- players_2024 %>%
+  group_by(team, cluster_label) %>%
+  summarise(
+    n_players = n(),
+    total_minutes = sum(mp, na.rm = TRUE)
+  ) %>%
+  ungroup()
+
+
+######## Updated model including past years performance as well, wit more weight on 2025 performance####
+
+
+library(tidyr)
+players_wide <- all_advanced %>%
+  filter(year %in% c(2023, 2024, 2025)) %>%
+  select(player, team, year, mp, per, ws) %>%
+  pivot_wider(
+    names_from = year,
+    values_from = c(mp, per, ws)
+  )
+
+players_wide <- players_wide %>%
+  mutate(
+    per_2023 = as.numeric(per_2023),
+    per_2024 = as.numeric(per_2024),
+    per_2025 = as.numeric(per_2025),
+    ws_2023 = as.numeric(ws_2023),
+    ws_2024 = as.numeric(ws_2024),
+    ws_2025 = as.numeric(ws_2025),
+    mp_2023 = as.numeric(mp_2023),
+    mp_2024 = as.numeric(mp_2024),
+    mp_2025 = as.numeric(mp_2025)
+  )
+
+weighted_mean_ignore_na <- function(values, weights) {
+  # Remove NAs
+  keep <- !is.na(values)
+  if (sum(keep) == 0) {
+    return(NA_real_)  # All values missing
+  }
+  sum(values[keep] * weights[keep]) / sum(weights[keep])
+}
+
+
+players_weighted <- players_wide %>%
+  rowwise() %>%
+  mutate(
+    weighted_per = weighted_mean_ignore_na(
+      c(per_2023, per_2024, per_2025),
+      c(0.1, 0.3, 0.6)
+    ),
+    weighted_ws = weighted_mean_ignore_na(
+      c(ws_2023, ws_2024, ws_2025),
+      c(0.1, 0.3, 0.6)
+    ),
+    weighted_mp = weighted_mean_ignore_na(
+      c(mp_2023, mp_2024, mp_2025),
+      c(0.1, 0.3, 0.6)
+    )
+  ) %>%
+  ungroup()
+
+players_ranked <- players_weighted %>%
+  group_by(team) %>%
+  mutate(
+    per_minute_score = scale(weighted_mp) + scale(weighted_ws)
+  ) %>%
+  arrange(team, desc(per_minute_score)) %>%
+  mutate(
+    rank_within_team = row_number(),
+    protected = if_else(rank_within_team <= 5, 1, 0)
+  ) %>%
+  ungroup()
+
+
+players_ranked %>%
+  select(team, player, weighted_mp, weighted_ws, per_minute_score, protected) %>%
+  arrange(team, desc(per_minute_score))
+
+library(ggplot2)
+
+ggplot(players_ranked, aes(
+  x = reorder(player, per_minute_score),
+  y = per_minute_score,
+  fill = factor(protected)
+)) +
+  geom_col() +
+  coord_flip() +
+  facet_wrap(~team, scales = "free_y") +
+  labs(
+    title = "Player Rankings and Protection Status",
+    x = "Player",
+    y = "Per-Minute Score",
+    fill = "Protected"
+  ) +
+  theme_minimal()
+
+protected_players <- players_ranked %>%
+  filter(protected == 1) %>%
+  arrange(team)
+unprotected_players <- players_ranked %>%
+  filter(protected == 0) %>%
+  arrange(team)
+
+######      
+
+
+
+
+
+
+
+##########  Decision Tree ###
+# - can use this to determine what the seed will be for the expansion team
+# - can use this to see which predictors are most valuable when predicting a teams seed/success
+# - then using those predictors we can predict how teams are going to do in the 2025 season as of right now data
+# - can we maybe apply that to see how the new expansion team is going to do
+
+
+############ Random Forest Model #####
+#   - predict Salary, maybe can see what varibles are most important for predicting whos protected and who i snot protected
+
+## XGBoost Model #
+# to predict the probability that a player is oging to be protected
+# to predict a players performance in the next year, predicting their per/rating
+
+
+
 
