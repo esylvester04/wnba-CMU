@@ -734,7 +734,7 @@ ggplot(protected_2024, aes(x = reorder(player, -per), y = per, fill = team)) +
 team_cluster_counts <- players_2024 %>%
   group_by(team, cluster_label) %>%
   summarise(
-    n_players = n(),
+    n_players = n(),.data = 
     total_minutes = sum(mp, na.rm = TRUE)
   ) %>%
   ungroup()
