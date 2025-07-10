@@ -836,9 +836,38 @@ unprotected_players <- players_ranked %>%
   arrange(team)
 
 ######      
+library(readxl)
+c_years<- read_excel("contract years left.xlsx")
+
+c_years <- c_years %>% select(player, contract_y, ufa)
+
+
+########
+library(dplyr)
+
+c_years_clean <- c_years %>%
+  select(player, contract_y)
+
+players_weighted_c <- players_weighted %>%
+  left_join(c_years_clean, by = "player")
+colnames(players_weighted_c)
 
 
 
+summary(players_weighted$years_left)
+
+
+players_ranked <- players_weighted %>%
+  group_by(team) %>%
+  mutate(
+    per_minute_score = scale(weighted_mp) + scale(weighted_ws) + 0.3 * scale(years_left)
+  ) %>%
+  arrange(team, desc(per_minute_score)) %>%
+  mutate(
+    rank_within_team = row_number(),
+    protected = if_else(rank_within_team <= 5, 1, 0)
+  ) %>%
+  ungroup()
 
 
 
