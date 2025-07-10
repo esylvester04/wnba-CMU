@@ -563,16 +563,19 @@ ggplot(salary_stat, aes(x = per, y = salary_clean)) +
     caption = "Source: Basketball-Reference & Her Hoop Stats"
   ) +
 
-  geom_hline(yintercept = 65000, linetype = "dashed", color = "black") +
-  geom_hline(yintercept = 80000, linetype = "dashed", color = "black") +
-  geom_hline(yintercept = 208000, linetype = "dashed", color = "green") +
-  
+  # geom_hline(yintercept = 65000, linetype = "dashed", color = "black") +
+  # geom_hline(yintercept = 80000, linetype = "dashed", color = "black") +
+  # geom_hline(yintercept = 208000, linetype = "dashed", color = "green") +
+  # 
   scale_y_continuous(
     labels = dollar_format(),
     breaks = seq(0, 300000, by = 40000)
   ) +
+  scale_x_continuous(breaks = seq(0, 35, by = 5)) +
   coord_cartesian(xlim = c(0, 35)) +
-  theme_minimal(base_size = 14)
+  theme_classic(base_size = 14) +
+  theme(
+    plot.title = element_text(face = "bold", size = 15))
 
 
 
