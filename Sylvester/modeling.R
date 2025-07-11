@@ -30,21 +30,18 @@ total_weighted_per <- advanced_weighted_norm %>%
   group_by(player) %>%
   summarise(weighted_per_total = sum(weighted_per, na.rm = TRUE), .groups = "drop")
 
-# Pivot weighted PER by year into wide format
-weighted_per_wide <- advanced_weighted_norm %>%
-  mutate(year = paste0("per_", str_sub(year, 3, 4))) %>%
-  select(player, year, weighted_per) %>%
-  pivot_wider(
-    names_from = year,
-    values_from = weighted_per,
-    values_fill = 0
-  )
 
-# Merge total weighted PER into salary stats
-salary_stats <- salary_stats %>%
-  #select(-weighted_per_total) %>%  # remove old if exists to avoid .x/.y
+# making a df with just players, name, year, and weighted per
+per_df <- salary_stats |>
+  select(player, team, pos, year, `Protection Status`, Salary) |>
+  rename(protection_status = `Protection Status`, 
+         salary = Salary) |>
   left_join(total_weighted_per, by = "player")
 
 
 
+
+##### adding the age dataframe
+
+source("data/ages.R")
 

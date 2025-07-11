@@ -5,6 +5,8 @@ library(dplyr)
 library(stringr)
 library(stringi)
 
+
+# getting ages of all active players, ages as of July 2025. Not updating real time
 ages <- ages |>
   rename(
     player = PLAYER, 
