@@ -62,12 +62,29 @@ per_df <- per_df %>%
 # Join age into per_df
 ## NOW INCLUDES: age (static as of July), weighted per
 per_df <- per_df |>
-  left_join(ages |>
-              select(player, age), by = "player") |>
-  mutate(age = if_else(player == "megan gustafson", 28, age))
+     left_join(ages |>
+     select(player, age), by = "player") |>
+     mutate(age = if_else(player == "megan gustafson", 28, age))
 
 
+#### adding proportion of salary 
 
+#getting total team spending 
+team_salary_totals <- per_df |>
+  group_by(team) |>
+  summarise(team_salary_total = sum(salary, na.rm = TRUE), .groups = "drop")
+
+
+per_df <- per_df |>
+  left_join(team_salary_totals, by = "team") |>
+  mutate(
+    salary_share = salary / team_salary_total
+  )
+
+salary_df <- per_df |>
+  select(player, team, salary, team_salary_total, salary_share) |>
+  arrange(desc(salary_share)) |>
+  slice_head(n = 10)
 
 
 
