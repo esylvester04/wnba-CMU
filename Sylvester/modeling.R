@@ -81,10 +81,125 @@ per_df <- per_df |>
     salary_share = salary / team_salary_total
   )
 
-salary_df <- per_df |>
+per_df |>
   select(player, team, salary, team_salary_total, salary_share) |>
   arrange(desc(salary_share)) |>
   slice_head(n = 10)
+
+
+# starting the modeling comparisons: 
+# simple linear model first
+lm <- per_df |>
+  filter(!is.na(age), !is.na(weighted_per_total), !is.na(salary), !is.na(salary_share)) |>
+  lm(salary ~ age + weighted_per_total + salary_share, data = _)
+summary(lm)
+
+library(broom)
+augment(lm) |>
+  ggplot(aes(.fitted, .resid)) +
+  geom_point(alpha = 0.6) +
+  geom_hline(yintercept = 0, linetype = "dashed") +
+  labs(
+    title = "Residuals vs. Fitted",
+    x = "Fitted Salary",
+    y = "Residuals"
+  ) +
+  theme_minimal() #cone shape-- definitely violated LINE conditions
+
+#trying a log transformation on the outcome 
+model_log <- per_df |>
+  filter(!is.na(age), !is.na(weighted_per_total), !is.na(salary), !is.na(salary_share)) |>
+  lm(log(salary) ~ age + weighted_per_total + salary_share, data = _)
+
+augment(model_log) |>
+  ggplot(aes(.fitted, .resid)) +
+  geom_point(alpha = 0.6) +
+  geom_hline(yintercept = 0, linetype = "dashed") +
+  labs(title = "Residuals vs. Fitted (Log Model)") #still concerning linearity 
+# some bad outliers 
+
+
+#trying polynomial age 
+model_poly <- per_df |>
+  filter(!is.na(age), !is.na(weighted_per_total), !is.na(salary), !is.na(salary_share)) |>
+  lm(log(salary) ~ poly(age, 2) + weighted_per_total + salary_share, data = _)
+
+augment(model_poly) |>
+  ggplot(aes(.fitted, .resid)) +
+  geom_point(alpha = 0.6) +
+  geom_hline(yintercept = 0, linetype = "dashed") +
+  labs(title = "Residuals vs. Fitted (Poly Model)") 
+
+
+
+# trying interaction models:
+model_interaction <- per_df |>
+  filter(!is.na(age), !is.na(weighted_per_total), !is.na(salary), !is.na(salary_share)) |>
+  lm(salary ~ age * weighted_per_total + salary_share, data = _)
+summary(model_interaction)
+
+augment(model_interaction) |>
+  ggplot(aes(.fitted, .resid)) +
+  geom_point(alpha = 0.6) +
+  geom_hline(yintercept = 0, linetype = "dashed") +
+  labs(
+    title = "Residuals vs Fitted (Interaction Model)",
+    x = "Predicted Salary",
+    y = "Residuals"
+  ) +
+  theme_minimal() #more conditions violations
+
+
+
+## regularized model for prediction
+
+###adding a LASSO model 
+library(glmnet)
+
+# Prepare matrix
+X <- per_df |>
+  filter(!is.na(age), !is.na(weighted_per_total), !is.na(salary), !is.na(salary_share)) |>
+  select(age, weighted_per_total, salary_share) |>
+  as.matrix()
+
+y <- per_df |>
+  filter(!is.na(age), !is.na(weighted_per_total), !is.na(salary), !is.na(salary_share)) |>
+  pull(salary)
+
+# Fit lasso
+model_lasso <- cv.glmnet(X, y, alpha = 1)
+model_lasso$lambda.min       # Lambda that minimizes cross-validation error
+model_lasso$lambda.1se       # Simpler model within 1 SE of minimum
+
+coef(model_lasso, s = "lambda.min")
+
+pred_df <- per_df |>
+  filter(!is.na(age), !is.na(weighted_per_total), !is.na(salary), !is.na(salary_share)) |>
+  mutate(
+    predicted_salary_lasso = predict(model_lasso, newx = X, s = "lambda.min") |> as.numeric(),
+    residual_lasso = salary - predicted_salary_lasso
+  )
+
+
+library(yardstick)
+tibble(
+  truth = y,
+  estimate = predict(model_lasso, newx = X, s = "lambda.min") |> as.numeric()
+) |>
+  metrics(truth = truth, estimate = estimate)
+
+
+
+ggplot(pred_df, aes(x = predicted_salary_lasso, y = salary)) +
+  geom_point(alpha = 0.6, color = "steelblue") +
+  geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "gray") +
+  labs(
+    title = "Actual vs. Predicted Salary (LASSO)",
+    x = "Predicted Salary",
+    y = "Actual Salary"
+  ) +
+  theme_minimal()
+
 
 
 
