@@ -50,58 +50,17 @@ players_weighted <- players_wide %>%
   ) %>%
   ungroup()
 
-players_ranked <- players_weighted %>%
-  group_by(team) %>%
-  mutate(
-    per_minute_score = scale(weighted_mp) + scale(weighted_ws)
-  ) %>%
-  arrange(team, desc(per_minute_score)) %>%
-  mutate(
-    rank_within_team = row_number(),
-    protected = if_else(rank_within_team <= 5, 1, 0)
-  ) %>%
-  ungroup()
-
-
-players_ranked %>%
-  select(team, player, weighted_mp, weighted_ws, per_minute_score, protected) %>%
-  arrange(team, desc(per_minute_score))
-
-
-
-protected_players <- players_ranked %>%
-  filter(protected == 1) %>%
-  arrange(team)
-unprotected_players <- players_ranked %>%
-  filter(protected == 0) %>%
-  arrange(team)
 
 ######      
 library(readxl)
-c_years<- read_excel("contract years left.xlsx")
+c_years<- read_excel("data/contracts.xlsx")
 
-c_years <- c_years %>% select(player, contract_y, ufa)
-
-
-########
-library(dplyr)
-
-c_years_clean <- c_years %>%
-  select(player, contract_y)
-
-players_weighted_c <- players_weighted %>%
-  left_join(c_years_clean, by = "player")
-colnames(players_weighted_c)
-
-
-
-summary(players_weighted_c$contract_y)
-
+c_years <- c_years %>% select(player, contract_y)
 
 ########
 library(stringi)
 
-players_weighted_summarised <- players_weighted_c %>%
+players_weighted_summarised <- players_weighted %>%
   group_by(player) %>%
   summarise(
     weighted_mp = sum(weighted_mp, na.rm = TRUE),
@@ -118,7 +77,7 @@ players_weighted_summarised <- players_weighted_summarised %>%
   )
 
 
-c_years_clean <- c_years_clean %>%
+c_years <- c_years %>%
   mutate(
     player = str_squish(player),
     player = str_to_title(player)
@@ -133,7 +92,7 @@ players_weighted_summarised <- players_weighted_summarised %>%
          player = str_replace(player, "^([\\w']+)\\s+.*\\s+([\\w']+)$", "\\1 \\2"))
 
 
-c_years_clean <- c_years_clean %>% 
+c_years <- c_years %>% 
   mutate(player = stri_trans_general(player, "Latin-ASCII"),
          player = str_trim(player),
          player = str_to_lower(player),
@@ -145,16 +104,31 @@ c_years_clean <- c_years_clean %>%
 
 
 players_weighted_final <- players_weighted_summarised %>%
-  right_join(c_years_clean, by = "player")
+  right_join(c_years, by = "player")
+
+
+players_ranked %>%
+  select(team, player, weighted_mp, weighted_ws, per_minute_score, protected) %>%
+  arrange(team, desc(per_minute_score))
+
+
+
+protected_players <- players_ranked %>%
+  filter(protected == 1) %>%
+  arrange(team)
+unprotected_players <- players_ranked %>%
+  filter(protected == 0) %>%
+  arrange(team)
+
 
 
 players_ranked <- players_weighted_final %>%
   group_by(team) %>%
   mutate(
-    per_minute_score = scale(weighted_mp) +
-      scale(weighted_ws) +
+    per_minute_score =
+      0.2*scale(weighted_ws) +
       scale(weighted_per) +
-      0.3 * scale(contract_y)
+      0.4 * scale(contract_y)
   ) %>%
   arrange(team, desc(per_minute_score)) %>%
   mutate(
