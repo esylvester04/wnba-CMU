@@ -201,6 +201,14 @@ ggplot(pred_df, aes(x = predicted_salary_lasso, y = salary)) +
   theme_minimal()
 
 
+##### adding Isabella's contract data 
+
+source("Isabella/salary_proportion_code.R")
+p_salary <- p_salary |> # 
+  mutate(player = player |>
+        str_to_lower() |>
+        stri_trans_general("Latin-ASCII")) # making lowercase/ no accents
+
 
 
 
