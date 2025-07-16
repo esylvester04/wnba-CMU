@@ -32,7 +32,7 @@ total_weighted_per <- advanced_weighted_norm |>
     .groups = "drop"
   )
 
-
+library(stringr)
 # making a df with just players, name, year, and weighted per
 per_df <- salary_stats |>
   select(player, team, pos, year, `Protection Status`, Salary) |>
@@ -202,12 +202,65 @@ ggplot(pred_df, aes(x = predicted_salary_lasso, y = salary)) +
 
 
 ##### adding Isabella's contract data 
-
+library(stringi)
+library(readxl)
 source("Isabella/salary_proportion_code.R")
 p_salary <- p_salary |> # 
   mutate(player = player |>
         str_to_lower() |>
         stri_trans_general("Latin-ASCII")) # making lowercase/ no accents
+
+
+
+# getting better.. only 18 players in my per DF that do npt appear in Isabella's
+# contract DF. this is likely because they are short term contracts, overseas, hardships, or waived
+
+# Leaving the missing player in with NA salary (? )
+# OR jUST REMOVE COMPLETELY because they aren't on active contracts (?)
+###### definitely need to at least leave the NAs out during the modeling phase 
+
+# DATA TO USE FOR MODELING: 
+# Isabella's contract df with my weighted PER variable 
+
+library(stringr)
+
+per_df <- per_df |>
+  mutate(player = player |>
+           str_to_lower() |>
+           stri_trans_general("Latin-ASCII") |>
+           str_squish())
+
+
+p_salary <- p_salary |>
+  left_join(
+    per_df |> select(player, weighted_per_total, age),
+    by = "player"
+  )
+
+
+clean_df <- p_salary |> 
+  filter(player %in% p_salary$player)
+
+p_salary |>
+  filter(is.na(weighted_per_total)) |>
+  select(player) # 13 players without PER. rookies, injured players without enough minutes
+# remove NAs during modeling (?)
+
+clean_df <- clean_df |> 
+  mutate(weighted_per_total = coalesce(weighted_per_total.x, weighted_per_total.y)) |> 
+  select(-weighted_per_total.x, -weighted_per_total.y)
+
+
+  
+# trying LASSO regression again: 
+X <- model.matrix(salary ~ age + weighted_per_total + salary_proportion, data = clean_df)[, -1]
+y <- clean_df$salary
+cv_lasso <- cv.glmnet(X, y, alpha = 1)
+
+plot(cv_lasso, xvar = "lambda")
+
+
+
 
 
 
