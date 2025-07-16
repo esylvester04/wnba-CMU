@@ -44,8 +44,8 @@ players_weighted <- players_wide %>%
       c(0.1, 0.3, 0.6)
     ),
     weighted_mp = weighted_mean_ignore_na(
-      c(mp_2023, mp_2024, mp_2025),
-      c(0.1, 0.3, 0.6)
+      c(mp_2024, mp_2025),
+      c(0.3, 0.7)
     )
   ) %>%
   ungroup()
@@ -113,22 +113,15 @@ players_ranked %>%
 
 
 
-protected_players <- players_ranked %>%
-  filter(protected == 1) %>%
-  arrange(team)
-unprotected_players <- players_ranked %>%
-  filter(protected == 0) %>%
-  arrange(team)
-
 
 
 players_ranked <- players_weighted_final %>%
   group_by(team) %>%
   mutate(
-    per_minute_score =
+    per_minute_score = scale(weighted_mp) +
       0.2*scale(weighted_ws) +
-      scale(weighted_per) +
-      0.4 * scale(contract_y)
+      0.1*scale(weighted_per) +
+      0.2 * scale(contract_y)
   ) %>%
   arrange(team, desc(per_minute_score)) %>%
   mutate(
@@ -137,4 +130,30 @@ players_ranked <- players_weighted_final %>%
   ) %>%
   ungroup()
 
+
+players_ranked_u <- players_weighted_final %>%
+  group_by(team) %>%
+  mutate(
+    per_minute_score =
+      0.3*scale(weighted_ws) +
+      0.1*scale(weighted_per) +
+      0.2 * scale(contract_y)
+  ) %>%
+  arrange(team, desc(per_minute_score)) %>%
+  mutate(
+    rank_within_team = row_number(),
+    protected = if_else(rank_within_team <= 5, 1, 0)
+  ) %>%
+  ungroup()
+
+protected_players <- players_ranked %>%
+  filter(protected == 1) %>%
+  arrange(team)
+unprotected_players <- players_ranked %>%
+  filter(protected == 0) %>%
+  arrange(team)
+
+unprotected_players_u <- players_ranked_u %>%
+  filter(protected == 0) %>%
+  arrange(team)
 

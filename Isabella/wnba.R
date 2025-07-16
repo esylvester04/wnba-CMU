@@ -275,114 +275,114 @@ all_advanced <- bind_rows(single_or_no_trade, multi_rows_cleaned) %>%
 #   )
 
 #########         Salary Data         ############
-
-# s_url_2022 <- "https://herhoopstats.com/salary-cap-sheet/wnba/players/salary_2022/stats_2024/?stats_to_show=per_game&stat_to_show=pts_per_game"
 # 
+# s_url_2022 <- "https://herhoopstats.com/salary-cap-sheet/wnba/players/salary_2022/stats_2024/?stats_to_show=per_game&stat_to_show=pts_per_game"
+# # 
 # s_wnba_2022<- read_html(s_url_2022) %>% 
 #   html_element("table.salary-stat") %>% html_table() %>% select(Player, `2022 Salary`, `2022 Signing`)
-# 
-# 
+# # 
+# # 
 # s_url_2023 <- "https://herhoopstats.com/salary-cap-sheet/wnba/players/salary_2023/stats_2024/?stats_to_show=per_game&stat_to_show=pts_per_game"
-# 
+# # 
 # s_wnba_2023<- read_html(s_url_2023) %>% 
 #   html_element("table.salary-stat") %>% html_table()%>% select(Player, `2023 Salary`, `2023 Signing`)
-# 
-# 
+# # # 
+# # 
 # s_url_2024 <- "https://herhoopstats.com/salary-cap-sheet/wnba/players/salary_2024/stats_2024/?stats_to_show=per_game&stat_to_show=pts_per_game"
-# 
+# # 
 # s_wnba_2024<- read_html(s_url_2024) %>% 
 #   html_element("table.salary-stat") %>% html_table() %>% select(Player, `2024 Salary`, `2024 Signing`)
-
 # 
+# # 
 # s_url_2025 <- "https://herhoopstats.com/salary-cap-sheet/wnba/players/salary_2025/stats_2024/?stats_to_show=per_game&stat_to_show=pts_per_game"
-# 
+# # 
 # s_wnba_2025<- read_html(s_url_2025) %>% 
 #   html_element("table.salary-stat") %>% html_table() %>% select(Player, `2025 Salary`, `2025 Signing`)
-
-
+# 
+# 
 # s_wnba<- bind_rows(s_wnba_2022,s_wnba_2023,s_wnba_2024,s_wnba_2025)
-
-
 # 
-# ########       Combining Datasets    ###########
-# wnba_salaries <- read_csv("WNBA Salaries 2.csv")
 # 
+# # 
+# # ########       Combining Datasets    ###########
+# #wnba_salaries <- read_csv("WNBA Salaries 2.csv")
+# # 
 # multi_rows <- a_wnba_2025 %>%
 #   group_by(player, year) %>%
 #   filter(n() > 1) %>%          # more than one row for that player-year
 #   ungroup() %>%
 #   select(player, year) %>%
 #   distinct()
-# 
-# # Step 2: Find last team per player-year (excluding TOT)
+# # 
+# # # Step 2: Find last team per player-year (excluding TOT)
 # last_team_per_player_years <- a_wnba_2025 %>%
-#   filter(team != "TOT") %>%
-#   semi_join(multi_rows, by = c("player", "year")) %>%  # only for multi-row player-years
-#   group_by(player, year) %>%
-#   slice_tail(n = 1) %>%
-#   select(player, year, last_team = team)
-# 
-# # Step 3: Update TOT rows for these multi-row player-years
+#  filter(team != "TOT") %>%
+#  semi_join(multi_rows, by = c("player", "year")) %>%  # only for multi-row player-years
+#  group_by(player, year) %>%
+#  slice_tail(n = 1) %>%
+#  select(player, year, last_team = team)
+# # 
+# # # Step 3: Update TOT rows for these multi-row player-years
 # tot_rows_updateds <- a_wnba_2025 %>%
 #   filter(team == "TOT") %>%
 #   inner_join(multi_rows, by = c("player", "year")) %>%  # only TOT rows for multi-row players
 #   left_join(last_team_per_player_years, by = c("player", "year")) %>%
 #   mutate(team = last_team) %>%
 #   select(-last_team)
-# 
-# # Step 4: For multi-row player-years, keep only the updated TOT rows (drop single teams)
+# # 
+# # # Step 4: For multi-row player-years, keep only the updated TOT rows (drop single teams)
 # multi_rows_cleaneds <- tot_rows_updateds
-# 
-# # Step 5: For player-years with only 1 row or those not traded, keep as is
+# # 
+# # # Step 5: For player-years with only 1 row or those not traded, keep as is
 # single_or_no_trades <- a_wnba_2025 %>%
 #   anti_join(multi_rows, by = c("player", "year"))
-# 
-# # Step 6: Combine everything
+# # 
+# # # Step 6: Combine everything
 # a_wnba_2025_u <- bind_rows(single_or_no_trades, multi_rows_cleaneds) %>%
 #   arrange(player, year)
+# # 
+# # 
+# # 
+# # salary_recent <- wnba_salaries %>% filter(Year == 2025)
+# # salary_cleaned <- salary_recent %>%
+# #   distinct(Player, Year, .keep_all = TRUE)
+# 
+# library(stringi)
+# 
+# a_wnba_2025_u <- a_wnba_2025_u %>%
+#   mutate(player = stri_trans_general(player, "Latin-ASCII"),
+#          player = str_trim(player),
+#          player = str_to_lower(player),
+#          player = str_replace_all(player, "-", " "),  # Replace hyphen with space
+#          player = str_replace(player, "^([\\w']+)\\s+.*\\s+([\\w']+)$", "\\1 \\2"))
+# 
+# salary_cleaned <- salary_cleaned %>%
+#   mutate(Player = stri_trans_general(Player, "Latin-ASCII"),
+#          Player = str_trim(Player),
+#          Player = str_to_lower(Player),
+#          Player = str_replace_all(Player, "-", " "),  # Replace hyphen with space
+#          Player = str_replace(Player, "^([\\w']+)\\s+.*\\s+([\\w']+)$", "\\1 \\2"),
+#          Player = if_else(Player == "kariata diaby", "kadidja diaby", Player))
+# 
+# # Join after cleaning & fixing
+# salary_stat <- left_join(a_wnba_2025_u, salary_cleaned, by = c("player" = "Player"))
+# 
+# salary_stat <- salary_stat %>%
+#   filter(tolower(player) != "aerial powers")
 # 
 # 
+# ########## cleaning the salary column to be numeric
 # 
-# salary_recent <- wnba_salaries %>% filter(Year == 2025)
-# salary_cleaned <- salary_recent %>%
-#   distinct(Player, Year, .keep_all = TRUE)
-
-library(stringi)
-
-a_wnba_2025_u <- a_wnba_2025_u %>%
-  mutate(player = stri_trans_general(player, "Latin-ASCII"),
-         player = str_trim(player),
-         player = str_to_lower(player),
-         player = str_replace_all(player, "-", " "),  # Replace hyphen with space
-         player = str_replace(player, "^([\\w']+)\\s+.*\\s+([\\w']+)$", "\\1 \\2"))
-
-salary_cleaned <- salary_cleaned %>%
-  mutate(Player = stri_trans_general(Player, "Latin-ASCII"),
-         Player = str_trim(Player),
-         Player = str_to_lower(Player),
-         Player = str_replace_all(Player, "-", " "),  # Replace hyphen with space
-         Player = str_replace(Player, "^([\\w']+)\\s+.*\\s+([\\w']+)$", "\\1 \\2"),
-         Player = if_else(Player == "kariata diaby", "kadidja diaby", Player))
-
-# Join after cleaning & fixing
-salary_stat <- left_join(a_wnba_2025_u, salary_cleaned, by = c("player" = "Player"))
-
-salary_stat <- salary_stat %>%
-  filter(tolower(player) != "aerial powers")
-
-
-########## cleaning the salary column to be numeric
-
-
-salary_stat <- salary_stat %>%
-  mutate(
-    salary_clean = str_trim(Salary),                            # remove leading/trailing spaces
-    salary_clean = str_replace_all(salary_clean, "[$,]", ""),   # remove $ and commas
-    salary_clean = str_replace(salary_clean, "\\.00$", ""),     # optionally remove .00 if desired
-    salary_clean = na_if(salary_clean, "N/A"),                  # turn "N/A" to NA
-    salary_clean = na_if(salary_clean, ""),                     # turn blank strings to NA
-    salary_clean = as.numeric(salary_clean)                     # convert to numeric
-  )
+# 
+# salary_stat <- salary_stat %>%
+#   mutate(
+#     salary_clean = str_trim(Salary),                            # remove leading/trailing spaces
+#     salary_clean = str_replace_all(salary_clean, "[$,]", ""),   # remove $ and commas
+#     salary_clean = str_replace(salary_clean, "\\.00$", ""),     # optionally remove .00 if desired
+#     salary_clean = na_if(salary_clean, "N/A"),                  # turn "N/A" to NA
+#     salary_clean = na_if(salary_clean, ""),                     # turn blank strings to NA
+#     salary_clean = as.numeric(salary_clean)                     # convert to numeric
+#   )
 
 #######.   box score simple stats. ############
 wnba_2025 <- wnba_2025 %>% 
