@@ -1,6 +1,18 @@
+all_advanced <- read.csv("all_advanced.csv")
 
 ######## Updated model including past years performance as well, wit more weight on 2025 performance####
 library(tidyr)
+library(rvest)
+library(dplyr)
+library(janitor)
+library(lubridate)
+library(tidyverse)
+library(FactoMineR)
+library(factoextra)
+library(tidyr)
+library(ggplot2)
+library(broom)
+
 players_wide <- all_advanced %>%
   filter(year %in% c(2023, 2024, 2025)) %>%
   select(player, team, year, mp, per, ws) %>%
@@ -357,3 +369,16 @@ shinyApp(ui = ui, server = server)
 #   theme_minimal(base_size = 14) +
 #   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 # 
+
+
+
+
+
+
+
+
+
+
+
+
+
