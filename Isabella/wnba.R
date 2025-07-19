@@ -151,7 +151,7 @@ single_or_no_trade <- all_advanced %>%
 all_advanced <- bind_rows(single_or_no_trade, multi_rows_cleaned) %>%
   arrange(player, year)
 
-
+write.csv(all_advanced, "all_advanced.csv")
 # page <- read_html("https://www.basketball-reference.com/wnba/years/2022.html")
 # # Find all table elements
 # tables <- page %>% html_elements("table")

@@ -44,8 +44,8 @@ players_weighted <- players_wide %>%
       c(0.1, 0.3, 0.6)
     ),
     weighted_mp = weighted_mean_ignore_na(
-      c(mp_2024, mp_2025),
-      c(0.3, 0.7)
+      c(mp_2023_, mp_2024, mp_2025),
+      c(0.1, 0.3, 0.6)
     )
   ) %>%
   ungroup()
@@ -107,28 +107,28 @@ players_weighted_final <- players_weighted_summarised %>%
   right_join(c_years, by = "player")
 
 
-players_ranked %>%
-  select(team, player, weighted_mp, weighted_ws, per_minute_score, protected) %>%
-  arrange(team, desc(per_minute_score))
+# players_ranked %>%
+#   select(team, player, weighted_mp, weighted_ws, per_minute_score, protected) %>%
+#   arrange(team, desc(per_minute_score))
+# 
 
 
 
 
-
-players_ranked <- players_weighted_final %>%
-  group_by(team) %>%
-  mutate(
-    per_minute_score = scale(weighted_mp) +
-      0.2*scale(weighted_ws) +
-      0.1*scale(weighted_per) +
-      0.2 * scale(contract_y)
-  ) %>%
-  arrange(team, desc(per_minute_score)) %>%
-  mutate(
-    rank_within_team = row_number(),
-    protected = if_else(rank_within_team <= 5, 1, 0)
-  ) %>%
-  ungroup()
+# players_ranked <- players_weighted_final %>%
+#   group_by(team) %>%
+#   mutate(
+#     per_minute_score = scale(weighted_mp) +
+#       0.2*scale(weighted_ws) +
+#       0.1*scale(weighted_per) +
+#       0.2 * scale(contract_y)
+#   ) %>%
+#   arrange(team, desc(per_minute_score)) %>%
+#   mutate(
+#     rank_within_team = row_number(),
+#     protected = if_else(rank_within_team <= 5, 1, 0)
+#   ) %>%
+#   ungroup()
 
 
 players_ranked_u <- players_weighted_final %>%
@@ -146,14 +146,214 @@ players_ranked_u <- players_weighted_final %>%
   ) %>%
   ungroup()
 
-protected_players <- players_ranked %>%
-  filter(protected == 1) %>%
-  arrange(team)
-unprotected_players <- players_ranked %>%
-  filter(protected == 0) %>%
-  arrange(team)
 
-unprotected_players_u <- players_ranked_u %>%
-  filter(protected == 0) %>%
-  arrange(team)
 
+install.packages("shiny")
+
+
+
+
+
+library(shiny)
+library(ggplot2)
+library(dplyr)
+
+
+
+
+# Clean up your dataset (remove NA teams)
+players_ranked_u_clean <- players_ranked_u %>%
+  filter(!is.na(team))
+
+
+write.csv(players_ranked_u_clean, "player_protection.csv")
+
+players_ranked_u_clean <- read.csv("player_protection.csv")
+
+ui <- fluidPage(
+  titlePanel("WNBA Expansion Draft - Predicted Protection Status"),
+  sidebarLayout(
+    sidebarPanel(
+      selectInput(
+        inputId = "team_choice",
+        label = "Select a Team:",
+        choices = sort(unique(players_ranked_u_clean$team)),
+        selected = sort(unique(players_ranked_u_clean$team))[1]
+      )
+    ),
+    mainPanel(
+      plotOutput("protection_plot", height = "500px"),
+      br(),
+      tableOutput("protection_table")
+    )
+  )
+)
+
+# Server
+server <- function(input, output) {
+  
+  # Reactive filtered data
+  filtered_data <- reactive({
+    players_ranked_u_clean %>%
+      filter(team == input$team_choice)
+  })
+  
+  # Render the plot
+  output$protection_plot <- renderPlot({
+    data <- filtered_data()
+    
+    min_rank <- min(data$rank_within_team, na.rm = TRUE)
+    max_rank <- max(data$rank_within_team, na.rm = TRUE)
+    
+    ggplot(data, aes(
+      x = reorder(player, rank_within_team),
+      y = rank_within_team
+    )) +
+      geom_point(
+        aes(color = factor(protected, levels = c(1, 0))),
+        size = 4
+      ) +
+      geom_text(
+        aes(label = rank_within_team),
+        vjust = -0.7,
+        color = "black"
+      ) +
+      scale_color_manual(
+        values = c("1" = "forestgreen", "0" = "firebrick"),
+        labels = c("Protected", "Unprotected"),
+        name = "Status"
+      ) +
+      scale_y_continuous(
+        breaks = seq(min_rank, max_rank, by = 1),
+        limits = c(min_rank, max_rank)
+      ) +
+      labs(
+        x = "Player",
+        y = "Protection Rank",
+        title = paste("Protection Status -", input$team_choice)
+      ) +
+      theme_minimal(base_size = 14) +
+      theme(axis.text.x = element_text(angle = 45, hjust = 1))
+  })
+  
+  # Render the table
+  output$protection_table <- renderTable({
+    filtered_data() %>%
+      arrange(rank_within_team) %>%
+      select(player, rank_within_team, protected)
+  })
+}
+
+# Run the app
+shinyApp(ui = ui, server = server)
+
+# ui <- fluidPage(
+#   titlePanel("WNBA Expansion Draft - Protection Viewer"),
+#   sidebarLayout(
+#     sidebarPanel(
+#       selectInput(
+#         inputId = "team_choice",
+#         label = "Select a Team:",
+#         choices = sort(unique(players_ranked_u_clean$team)),
+#         selected = sort(unique(players_ranked_u_clean$team))[1]
+#       )
+#     ),
+#     mainPanel(
+#       plotOutput("protection_plot", height = "500px"),
+#       br(),
+#       tableOutput("protection_table")
+#     )
+#   )
+# )
+# 
+# # Server
+# server <- function(input, output) {
+#   
+#   # Reactive filtered data
+#   filtered_data <- reactive({
+#     players_ranked_u_clean %>%
+#       filter(team == input$team_choice)
+#   })
+#   
+#   # Render the plot
+#   output$protection_plot <- renderPlot({
+#     ggplot(filtered_data(), aes(
+#       x = reorder(player, rank_within_team),
+#       y = rank_within_team
+#     )) +
+#       geom_point(
+#         aes(color = factor(protected, levels = c(1, 0))),
+#         size = 4
+#       ) +
+#       geom_text(
+#         aes(label = rank_within_team),
+#         vjust = -0.7,
+#         color = "black"
+#       ) +
+#       scale_color_manual(
+#         values = c("1" = "forestgreen", "0" = "firebrick"),
+#         labels = c("Protected", "Unprotected"),
+#         name = "Status"
+#       ) +
+#       scale_y_continuous(
+#         breaks = 1:13,
+#         limits = c(1, 13)
+#       ) +
+#       labs(
+#         x = "Player",
+#         y = "Rank",
+#         title = paste("Protection Status -", input$team_choice)
+#       ) +
+#       theme_minimal(base_size = 14) +
+#       theme(axis.text.x = element_text(angle = 45, hjust = 1))
+#   })
+#   
+#   # Render the table
+#   output$protection_table <- renderTable({
+#     filtered_data() %>%
+#       arrange(rank_within_team) %>%
+#       select(player, rank_within_team, protected)
+#   })
+# }
+# 
+#     
+# shinyApp(ui = ui, server = server)
+# 
+# 
+# 
+# 
+# # For example, pick team ATL
+# data <- players_ranked_u_clean %>%
+#   filter(team == "LVA") %>%
+#   arrange(rank_within_team)
+# 
+# ggplot(data, aes(
+#   x = reorder(player, rank_within_team),
+#   y = rank_within_team
+# )) +
+#   geom_point(
+#     aes(color = factor(protected, levels = c(1,0))),
+#     size = 4
+#   ) +
+#   geom_text(
+#     aes(label = rank_within_team),
+#     vjust = -0.7,
+#     color = "black"
+#   ) +
+#   scale_color_manual(
+#     values = c("1" = "forestgreen", "0" = "firebrick"),
+#     labels = c("Protected", "Unprotected"),
+#     name = "Status"
+#   ) +
+#   scale_y_continuous(
+#     breaks = 1:10,   # show every integer rank
+#     limits = c(1, 10)  # optional, to be sure the scale starts at 1 and ends at 10
+#   ) +
+#   labs(
+#     title = "Las Vegas Aces Player Ranking",
+#     x = "Player",
+#     y = "Rank"
+#   ) +
+#   theme_minimal(base_size = 14) +
+#   theme(axis.text.x = element_text(angle = 45, hjust = 1))
+# 
