@@ -56,7 +56,7 @@ players_weighted <- players_wide %>%
       c(0.1, 0.3, 0.6)
     ),
     weighted_mp = weighted_mean_ignore_na(
-      c(mp_2023_, mp_2024, mp_2025),
+      c(mp_2023, mp_2024, mp_2025),
       c(0.1, 0.3, 0.6)
     )
   ) %>%
@@ -157,14 +157,6 @@ players_ranked_u <- players_weighted_final %>%
     protected = if_else(rank_within_team <= 5, 1, 0)
   ) %>%
   ungroup()
-
-
-
-install.packages("shiny")
-
-
-
-
 
 library(shiny)
 library(ggplot2)
