@@ -772,11 +772,11 @@ ggplot(xgb_preds, aes(x = actual, y = xgb_pred, color = residual)) +
   scale_x_continuous(labels = dollar_format(prefix = "$")) +
   scale_y_continuous(labels = dollar_format(prefix = "$")) +
   scale_color_gradient2(
-    low = "forestgreen",      # underpaid
+    low = "firebrick",      # uverpaid
     mid = "gray80",           # fair
-    high = "firebrick",       # overpaid
-    midpoint = 0,
-    name = "Estimated Team Savings"
+    high =  "forestgreen",       #underpaid
+    midpoint = 0
+   # name = "Estimated Team Savings"
   ) +
   labs(
     title = "XGBoost Predicted vs. Actual WNBA 2025 Salaries",
@@ -785,9 +785,9 @@ ggplot(xgb_preds, aes(x = actual, y = xgb_pred, color = residual)) +
   ) +
   theme_minimal(base_size = 15) +
   theme(
-    plot.title = element_text(face = "bold", hjust = 0.5),
-    axis.title = element_text(face = "bold"),
-    legend.title = element_text(face = "bold")
+    plot.title = element_text(hjust = 0.5),
+    axis.title = element_text(),
+    legend.title = element_text()
   )
 
 
@@ -839,4 +839,24 @@ underpaid_players |>
     xgb_pred = scales::dollar(xgb_pred),
     residual = scales::dollar(residual)
   )
+
+
+#' Create a table of most underpaid players by position
+#'
+#' @param underpaid_players A data frame with columns: player, pos, actual, xgb_pred, residual
+#' @return A formatted data frame with dollar-formatted columns
+#' @export
+get_top_underpaid_by_pos <- function(underpaid_players) {
+  underpaid_players |>
+    group_by(pos) |>
+    slice_max(residual, n = 1, with_ties = FALSE) |>
+    ungroup() |>
+    select(player, pos, actual, xgb_pred, residual) |>
+    arrange(desc(residual)) |>
+    mutate(
+      actual = scales::dollar(actual),
+      xgb_pred = scales::dollar(xgb_pred),
+      residual = scales::dollar(residual)
+    )
+}
 

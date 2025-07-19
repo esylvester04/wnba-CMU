@@ -1,0 +1,15 @@
+---
+title: "tables"
+format: html
+---
+
+
+```{r}
+source("/Users/ellasylvester/Documents/CMU/wnba-CMU/Sylvester/modeling.R")
+
+data <- get_wnba_data2()
+
+top_underpaid_table <- get_top_underpaid_by_pos(underpaid_players)
+print(top_underpaid_table)
+
+```
