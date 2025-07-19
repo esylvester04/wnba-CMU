@@ -217,6 +217,7 @@ rf_caret <- train(
 )
 print(rf_caret)
 
+
 lm_model <- train(
   salary ~ mp + age + usg_percent + ws + per,
   data = salary_stats_25_clean,
@@ -314,6 +315,8 @@ final_gbm <- train(
   trControl = trainControl(method = "none"),
   tuneGrid = gbm_tuned$bestTune
 )
+
+
 
 #########
 library(tidyverse)
@@ -518,9 +521,149 @@ head(undervalued_players, 10)
 
 
 
+######## With eighted PER
+library(stringi)
+
+
+# Create wide PER table
+per_wide <- all_advanced %>%
+  filter(year %in% c(2023, 2024, 2025)) %>%
+  select(player, year, per) %>%
+  pivot_wider(
+    names_from = year,
+    values_from = per,
+    names_prefix = "per_"
+  ) %>%
+  mutate(
+    player = stri_trans_general(player, "Latin-ASCII"),
+    player = str_trim(player),
+    player = str_to_lower(player),
+    player = str_replace_all(player, "-", " "),
+    player = str_replace(player, "^([\\w']+)\\s+.*\\s+([\\w']+)$", "\\1 \\2")
+  )
+
+# Merge with salary/stats
+wsalary_stats_25 <- salary_stats_25 %>%
+  left_join(per_wide, by = "player") %>%
+  mutate(
+    per_2023 = as.numeric(per_2023),
+    per_2024 = as.numeric(per_2024),
+    per_2025 = as.numeric(per_2025)
+  )
+
+# Weighted mean function
+weighted_mean_ignore_na <- function(values, weights) {
+  valid <- !is.na(values)
+  if (all(!valid)) return(NA_real_)
+  sum(values[valid] * weights[valid]) / sum(weights[valid])
+}
+
+# Compute weighted PER
+wsalary_stats_25 <- wsalary_stats_25 %>%
+  rowwise() %>%
+  mutate(
+    s_weighted_per = weighted_mean_ignore_na(
+      c(per_2023, per_2024, per_2025),
+      c(0.2, 0.6, 0.2)
+    )
+  ) %>%
+  ungroup()
+
+# Specify predictors
+x_vars <- c("mp", "age", "usg_percent", "ws", "s_weighted_per")
+
+# Ensure numeric
+wsalary_stats_25 <- wsalary_stats_25 %>%
+  mutate(
+    s_weighted_per = as.numeric(s_weighted_per)
+  )
+
+# Remove rows with NA in target or predictors
+wsalary_stats_25_clean <- wsalary_stats_25 %>%
+  drop_na(salary, all_of(x_vars))
 
 
 
+set.seed(123)
+n <- nrow(wsalary_stats_25_clean)
+train_idx <- sample(seq_len(n), size = 0.8 * n)
+
+train_data <- wsalary_stats_25_clean[train_idx, ]
+test_data  <- wsalary_stats_25_clean[-train_idx, ]
+
+X_train <- as.matrix(train_data[, x_vars])
+y_train <- train_data$salary
+
+X_test <- as.matrix(test_data[, x_vars])
+y_test <- test_data$salary
+
+dtrain <- xgb.DMatrix(data = X_train, label = y_train)
+dtest  <- xgb.DMatrix(data = X_test, label = y_test)
 
 
+simple_gbm <- xgboost(
+  data = dtrain,
+  objective = "reg:squarederror",
+  nrounds = 100,
+  verbose = 1
+)
+preds_test <- predict(simple_gbm, dtest)
+
+library(Metrics)
+rmse(y_test, preds_test)
+
+sst <- sum((y_test - mean(y_test))^2)
+ssr <- sum((y_test - preds_test)^2)
+r_squared <- 1 - ssr / sst
+r_squared
+
+xgb_cv <- xgb.cv(
+  data = dtrain,
+  nrounds = 100,
+  nfold = 5,   # 5-fold cross-validation
+  objective = "reg:squarederror",
+  verbose = 1,
+  early_stopping_rounds = 10   # stop early if no improvement
+)
+best_nrounds <- xgb_cv$best_iteration
+best_nrounds
+
+install.packages("glmnet")
+library(glmnet)
+
+# Make sure no NAs in your predictors and target
+wsalary_stats_25_clean <- wsalary_stats_25 %>%
+  filter(if_all(c(salary, mp, age, usg_percent, ws, s_weighted_per), ~ !is.na(.)))
+
+# Predictor matrix
+x_vars <- c("mp", "age", "s_weighted_per")
+X <- as.matrix(wsalary_stats_25_clean[, x_vars])
+
+# Target
+y <- wsalary_stats_25_clean$salary
+
+lasso_cv <- cv.glmnet(
+  X,
+  y,
+  alpha = 1,           # Lasso
+  nfolds = 5,          # 5-fold cross-validation
+  standardize = TRUE   # scales predictors
+)
+
+lasso_cv$lambda.min
+
+lasso_model <- glmnet(
+  X,
+  y,
+  alpha = 1,
+  lambda = lasso_cv$lambda.min,
+  standardize = TRUE
+)
+
+coef(lasso_model)
+
+preds <- predict(lasso_model, newx = X)
+
+library(Metrics)
+rmse(y, preds)
 
