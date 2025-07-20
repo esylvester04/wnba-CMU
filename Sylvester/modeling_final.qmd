@@ -276,7 +276,7 @@ get_wnba_data3 <- function() {
 }
 ```
 
-# last try 
+# CORRECT FUNCTION 
 ```{r}
 get_wnba_data <- function() {
   # Load advanced stats from CSV
@@ -489,9 +489,6 @@ model_data <- per_df |>
     !is.na(salary_share)
   )
 ```
-
-
-
 
 
 # Linear model
@@ -1096,5 +1093,21 @@ get_top_underpaid_by_pos <- function(underpaid_players) {
     )
 }
 
+```
+
+```{r}
+library(dplyr)
+library(scales)
+top_underpaid <- top_underpaid |>
+  mutate(player = stri_trans_general(player, "Latin-ASCII"),
+         player = str_trim(player),
+         player = str_to_lower(player),
+         player = str_replace_all(player, "-", " "),  # Replace hyphen with space
+         player = str_replace(player, "^([\\w']+)\\s+.*\\s+([\\w']+)$", "\\1 \\2"))
+  
+top_underpaid_formatted <- top_underpaid |>
+  mutate(across(c(actual, xgb_pred, residual), scales::dollar_format()))
+
+write.csv(top_underpaid_formatted, "salary_model_df.csv", row.names = FALSE)
 ```
 
