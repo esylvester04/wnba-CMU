@@ -404,6 +404,7 @@ library(tidyverse)
 theme_set(theme_light())
 library(stacks)
 glimpse(model_data)
+library(caret)
 
 # fitting a plain random forest model with no tuning
 library(ranger)
@@ -457,13 +458,13 @@ set.seed(1234)
 xg_tune1 <- train(
   x = xg_train1,
   y = yg_train1,
-  tuneGrid = xg_grid,
+  tuneGrid = xg_grid1,
   trControl = trainControl(method = "cv", number = 5),
   method = "xgbTree",
   metric = "RMSE"
 )
 
-
+library(xgboost)
 # fit final model  data
 xg_fit <- xgboost(
   data = xg_train1,
@@ -699,9 +700,6 @@ cv_summary |>
   ) +
   theme_minimal()
 
-
-library(ggplot2)
-library(dplyr)
 
 # Filter to XGBoost predictions only
 xgb_preds <- cv_results |> 

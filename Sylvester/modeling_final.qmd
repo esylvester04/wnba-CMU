@@ -1,0 +1,1100 @@
+---
+title: "Modeling Final"
+format: html
+---
+
+
+```{r}
+#loading dependent packages 
+library(dplyr)
+library(janitor)
+library(lubridate)
+library(readr)
+library(stringr)
+library(stringi) 
+library(tidyverse)
+```
+
+# loading data
+```{r}
+get_wnba_data1 <- function() {
+  # Load advanced stats from CSV
+  all_advanced <- read_csv("all_advanced.csv") |>
+    clean_names() |>
+    filter(player != "Player")  # Remove repeated header rows
+
+  # Fix traded players: keep updated TOT row with team info from last team played
+  multi_rows <- all_advanced |>
+    group_by(player, year) |>
+    filter(n() > 1) |>
+    ungroup() |>
+    select(player, year) |>
+    distinct()
+
+  last_team <- all_advanced |>
+    filter(team != "TOT") |>
+    semi_join(multi_rows, by = c("player", "year")) |>
+    group_by(player, year) |>
+    slice_tail(n = 1) |>
+    select(player, year, last_team = team)
+
+  tot_rows <- all_advanced |>
+    filter(team == "TOT") |>
+    inner_join(multi_rows, by = c("player", "year")) |>
+    left_join(last_team, by = c("player", "year")) |>
+    mutate(team = last_team) |>
+    select(-last_team)
+
+  no_trade_rows <- all_advanced |>
+    anti_join(multi_rows, by = c("player", "year"))
+
+  all_advanced <- bind_rows(no_trade_rows, tot_rows) |>
+    arrange(player, year)
+
+  # Filter 2025 for salary join
+  a_wnba_2025_u <- all_advanced |>
+    filter(year == 2025)
+
+  # Load and clean salary data
+  wnba_salaries <- read_csv("salaries.csv")
+
+  salary_cleaned <- wnba_salaries |>
+    filter(Year == 2025) |>
+    distinct(Player, Year, .keep_all = TRUE)
+
+  # Clean player names for joining
+  a_wnba_2025_u <- a_wnba_2025_u |>
+    mutate(player = str_trim(player))
+
+  salary_cleaned <- salary_cleaned |>
+    mutate(Player = str_trim(Player))
+
+  # Join advanced stats with salary
+  salary_stat <- left_join(a_wnba_2025_u, salary_cleaned, by = c("player" = "Player")) |>
+    mutate(
+      Salary = parse_number(Salary),
+      per = as.numeric(per),
+      per = if_else(per < 0, 0, per)
+    ) |>
+    filter(!is.na(Salary), !is.na(per))
+
+  return(list(
+    all_advanced = all_advanced,
+    salary_stat = salary_stat
+  ))
+}
+```
+
+# trying to fix 
+```{r}
+get_wnba_data2 <- function() {
+  # Load advanced stats from CSV
+  all_advanced <- read_csv("all_advanced.csv") |>
+    clean_names() |>
+    filter(player != "Player")  # Remove repeated header rows
+
+  # Check and display NAs in all_advanced before processing
+  print("NA values in all_advanced before filtering:")
+  print(summary(all_advanced))
+  
+  # Fix traded players: keep updated TOT row with team info from last team played
+  multi_rows <- all_advanced |>
+    group_by(player, year) |>
+    filter(n() > 1) |>
+    ungroup() |>
+    select(player, year) |>
+    distinct()
+
+  last_team <- all_advanced |>
+    filter(team != "TOT") |>
+    semi_join(multi_rows, by = c("player", "year")) |>
+    group_by(player, year) |>
+    slice_tail(n = 1) |>
+    select(player, year, last_team = team)
+
+  tot_rows <- all_advanced |>
+    filter(team == "TOT") |>
+    inner_join(multi_rows, by = c("player", "year")) |>
+    left_join(last_team, by = c("player", "year")) |>
+    mutate(team = last_team) |>
+    select(-last_team)
+
+  no_trade_rows <- all_advanced |>
+    anti_join(multi_rows, by = c("player", "year"))
+
+  all_advanced <- bind_rows(no_trade_rows, tot_rows) |>
+    arrange(player, year)
+
+  # Check and display NAs after processing the "TOT" rows
+  print("NA values in all_advanced after processing trades:")
+  print(summary(all_advanced))
+
+  # Filter 2025 for salary join
+  a_wnba_2025_u <- all_advanced |>
+    filter(year == 2025)
+
+  # Load and clean salary data
+  wnba_salaries <- read_csv("salaries.csv")
+
+  salary_cleaned <- wnba_salaries |>
+    filter(Year == 2025) |>
+    distinct(Player, Year, .keep_all = TRUE)
+
+  # Check for NAs in salary data before joining
+  print("NA values in salary_cleaned before joining:")
+  print(summary(salary_cleaned))
+
+  # Clean player names for joining
+  a_wnba_2025_u <- a_wnba_2025_u |>
+    mutate(player = str_trim(player))
+
+  salary_cleaned <- salary_cleaned |>
+    mutate(Player = str_trim(Player))
+
+  # Join advanced stats with salary
+  salary_stat <- left_join(a_wnba_2025_u, salary_cleaned, by = c("player" = "Player")) |>
+    mutate(
+      Salary = parse_number(Salary),
+      per = as.numeric(per),
+      per = if_else(per < 0, 0, per)
+    )
+
+  # Check for NAs after the join
+  print("NA values in salary_stat after join:")
+  print(summary(salary_stat))
+
+  # Filter out rows with NA salary or PER
+  salary_stat <- salary_stat |>
+    filter(!is.na(Salary), !is.na(per))
+
+  # Check which rows were dropped
+  dropped_rows <- salary_stat |>
+    filter(is.na(Salary) | is.na(per))
+  print("Rows with NAs that were dropped:")
+  print(dropped_rows)
+
+  return(list(
+    all_advanced = all_advanced,
+    salary_stat = salary_stat
+  ))
+}
+
+```
+
+# again 
+```{r}
+get_wnba_data3 <- function() {
+  # Load advanced stats from CSV
+  all_advanced <- read_csv("all_advanced.csv") |>
+    clean_names() |>
+    filter(player != "Player")  # Remove repeated header rows
+
+  # Check and display NAs in all_advanced before processing
+  print("NA values in all_advanced before filtering:")
+  print(summary(all_advanced))
+  
+  # Fix traded players: keep updated TOT row with team info from last team played
+  multi_rows <- all_advanced |>
+    group_by(player, year) |>
+    filter(n() > 1) |>
+    ungroup() |>
+    select(player, year) |>
+    distinct()
+
+  last_team <- all_advanced |>
+    filter(team != "TOT") |>
+    semi_join(multi_rows, by = c("player", "year")) |>
+    group_by(player, year) |>
+    slice_tail(n = 1) |>
+    select(player, year, last_team = team)
+
+  tot_rows <- all_advanced |>
+    filter(team == "TOT") |>
+    inner_join(multi_rows, by = c("player", "year")) |>
+    left_join(last_team, by = c("player", "year")) |>
+    mutate(team = last_team) |>
+    select(-last_team)
+
+  no_trade_rows <- all_advanced |>
+    anti_join(multi_rows, by = c("player", "year"))
+
+  all_advanced <- bind_rows(no_trade_rows, tot_rows) |>
+    arrange(player, year)
+
+  # Check and display NAs after processing the "TOT" rows
+  print("NA values in all_advanced after processing trades:")
+  print(summary(all_advanced))
+
+  # Filter 2025 for salary join
+  a_wnba_2025_u <- all_advanced |>
+    filter(year == 2025)
+
+  # Load and clean salary data
+  wnba_salaries <- read_csv("salaries.csv")
+
+  salary_cleaned <- wnba_salaries |>
+    filter(Year == 2025) |>
+    distinct(Player, Year, .keep_all = TRUE)
+
+  # Check for NAs in salary data before joining
+  print("NA values in salary_cleaned before joining:")
+  print(summary(salary_cleaned))
+
+  # Clean player names for joining
+  a_wnba_2025_u <- a_wnba_2025_u |>
+    mutate(player = str_trim(player))
+
+  salary_cleaned <- salary_cleaned |>
+    mutate(Player = str_trim(Player))
+
+  # Join advanced stats with salary
+  salary_stat <- left_join(a_wnba_2025_u, salary_cleaned, by = c("player" = "Player")) |>
+    mutate(
+      Salary = parse_number(Salary, na = "N/A"),  # Handle N/A explicitly
+      per = as.numeric(per),
+      per = if_else(per < 0, 0, per)
+    )
+
+  # Check for NAs after the join
+  print("NA values in salary_stat after join:")
+  print(summary(salary_stat))
+
+  # Filter out rows with NA salary or PER
+  salary_stat <- salary_stat |>
+    filter(!is.na(Salary), !is.na(per))
+
+  # Check which rows were dropped
+  dropped_rows <- salary_stat |>
+    filter(is.na(Salary) | is.na(per))
+  print("Rows with NAs that were dropped:")
+  print(dropped_rows)
+
+  return(list(
+    all_advanced = all_advanced,
+    salary_stat = salary_stat
+  ))
+}
+```
+
+# last try 
+```{r}
+get_wnba_data <- function() {
+  # Load advanced stats from CSV
+  all_advanced <- read_csv("all_advanced.csv") |>
+    clean_names() |>
+    filter(player != "Player")  # Remove repeated header rows
+
+  # Fix traded players: keep updated TOT row with team info from last team played
+  multi_rows <- all_advanced |>
+    group_by(player, year) |>
+    filter(n() > 1) |>
+    ungroup() |>
+    select(player, year) |>
+    distinct()
+
+  last_team <- all_advanced |>
+    filter(team != "TOT") |>
+    semi_join(multi_rows, by = c("player", "year")) |>
+    group_by(player, year) |>
+    slice_tail(n = 1) |>
+    select(player, year, last_team = team)
+
+  tot_rows <- all_advanced |>
+    filter(team == "TOT") |>
+    inner_join(multi_rows, by = c("player", "year")) |>
+    left_join(last_team, by = c("player", "year")) |>
+    mutate(team = last_team) |>
+    select(-last_team)
+
+  no_trade_rows <- all_advanced |>
+    anti_join(multi_rows, by = c("player", "year"))
+
+  all_advanced <- bind_rows(no_trade_rows, tot_rows) |>
+    arrange(player, year)
+
+  # Filter 2025 for salary join
+  a_wnba_2025_u <- all_advanced |>
+    filter(year == 2025)
+
+  # Load and clean salary data
+  wnba_salaries <- read_csv("salaries.csv")
+
+  salary_cleaned <- wnba_salaries |>
+    filter(Year == 2025) |>
+    distinct(Player, Year, .keep_all = TRUE)
+
+  # Clean player names for joining
+  a_wnba_2025_u <- a_wnba_2025_u |>
+    mutate(player = str_trim(player))
+
+  salary_cleaned <- salary_cleaned |>
+    mutate(Player = str_trim(Player))
+
+  # Join advanced stats with salary
+  salary_stat <- left_join(a_wnba_2025_u, salary_cleaned, by = c("player" = "Player")) |>
+    mutate(
+      Salary = parse_number(Salary, na = "N/A"),  # Handle N/A explicitly
+      per = as.numeric(per),
+      per = if_else(per < 0, 0, per)
+    )
+
+  # Return the data without filtering or printing NAs
+  return(list(
+    all_advanced = all_advanced,
+    salary_stat = salary_stat
+  ))
+}
+```
+
+
+```{r}
+library(dplyr)
+library(tidyr)
+library(stringr)
+
+# Call the function
+wnba_data <- get_wnba_data()
+
+# Save the outputs to data frames
+all_advanced_df <- wnba_data$all_advanced
+salary_stat_df <- wnba_data$salary_stat
+
+all_advanced_df <- all_advanced_df |>
+    mutate(
+    player = player |>
+      str_to_lower() |>
+      stringi::stri_trans_general("Latin-ASCII"))
+    
+salary_stat_df <- salary_stat_df |>
+    mutate(
+    player = player |>
+      str_to_lower() |>
+      stringi::stri_trans_general("Latin-ASCII"))
+
+# Check for rows with NA values in the merged dataframe after the join
+na_check_after_join <- salary_stat_df |>
+  filter(is.na(Salary) | is.na(per) | is.na(team) | is.na(player))
+
+# Print the rows with NA values to identify them
+print(na_check_after_join)
+
+# remove: kadidja diaby (not active), 
+
+salary_stat_df <- salary_stat_df |>
+  mutate(Salary = case_when(
+    player == "anastasiia kosu" ~ 69267,
+    player == "te-hina paopao" ~ 69267,
+    player == "azura stevens" ~ 195000,
+    player == "kelsey mitchell" ~ 249244,
+    player == "kiana williams" ~ 66079,
+    player == "leila lacan" ~ 72455,
+    player == "luisa geiselsoder" ~ 66079,
+    player == "monique akoa-makani" ~ 66079,
+    TRUE ~ Salary
+  ))
+
+
+
+year_weights <- tibble(
+  year = c(2023, 2024, 2025),
+  weight = c(0.3, 0.5, 0.2)
+)
+
+advanced_weighted <- all_advanced_df |>
+  inner_join(year_weights, by = "year") |>
+  filter(!is.na(per)) |>
+  mutate(per = as.numeric(per))
+
+advanced_weighted_norm <- advanced_weighted |>
+  group_by(player) |>
+  mutate(
+    norm_weight = weight / sum(weight),
+    weighted_per = per * norm_weight
+  ) |>
+  ungroup()
+
+total_weighted_per <- advanced_weighted_norm |>
+  group_by(player) |>
+  summarise(
+    weighted_per_total = sum(weighted_per, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+per_df <- salary_stat_df |>
+  select(player, team, pos, year, `Protection Status`, Salary) |>
+  rename(
+    protection_status = `Protection Status`,
+    salary = Salary
+  ) |>
+  left_join(total_weighted_per, by = "player") |>
+  mutate(
+    player = player |>
+      str_to_lower() |>
+      stringi::stri_trans_general("Latin-ASCII")
+  )
+```
+
+#more cleaning
+```{r}
+#merging salary and cleaning names
+per_df <- salary_stat_df |>
+  select(player, team, pos, year, `Protection Status`, Salary) |>
+  rename(
+    protection_status = `Protection Status`,
+    salary = Salary
+  ) |>
+  left_join(total_weighted_per, by = "player") |>
+  mutate(
+    player = player |>
+      str_to_lower() |>
+      stringi::stri_trans_general("Latin-ASCII")
+  )
+
+source("data/ages_data.R")
+ages <- get_ages()
+
+per_df <- per_df |>
+  mutate(player = player |>
+           str_to_lower() |>
+           stringi::stri_trans_general("Latin-ASCII")) |>
+  left_join(ages |> select(player, age), by = "player") |>
+  mutate(age = if_else(player == "megan gustafson", 28, age))
+# 157 players as of now. 
+
+
+#### adding proportion of salary 
+
+#getting total team spending 
+team_salary_totals <- per_df |>
+  group_by(team) |>
+  summarise(team_salary_total = sum(salary, na.rm = TRUE), .groups = "drop")
+
+
+per_df <- per_df |>
+  left_join(team_salary_totals, by = "team") |>
+  mutate(
+    salary_share = salary / team_salary_total
+  )
+
+per_df |>
+  select(player, team, salary, team_salary_total, salary_share) |>
+  arrange(desc(salary_share)) |>
+  slice_head(n = 10)
+
+model_data <- per_df |>
+  filter(
+    !is.na(salary),
+    !is.na(age),
+    !is.na(weighted_per_total),
+    !is.na(salary_share)
+  )
+```
+
+
+
+
+
+# Linear model
+```{r}
+# simple linear model first
+lm <- model_data |>
+  lm(salary ~ age + weighted_per_total + salary_share, data = _)
+summary(lm)
+
+library(broom)
+# augment(lm) |>
+#   ggplot(aes(.fitted, .resid)) +
+#   geom_point(alpha = 0.6) +
+#   geom_hline(yintercept = 0, linetype = "dashed") +
+#   labs(
+#     title = "Residuals vs. Fitted",
+#     x = "Fitted Salary",
+#     y = "Residuals"
+#   ) +
+#   theme_minimal() #cone shape-- definitely violated LINE conditions
+
+# trying a log transformation on the outcome 
+model_log <- model_data |>
+  lm(log(salary) ~ age + weighted_per_total + salary_share, data = _)
+
+#still concerning linearity 
+# some bad outliers 
+
+# trying polynomial age 
+model_poly <- model_data |>
+  lm(log(salary) ~ poly(age, 2) + weighted_per_total + salary_share, data = _)
+
+# trying interaction models:
+model_interaction <- model_data |>
+  lm(salary ~ age * weighted_per_total + salary_share, data = _)
+summary(model_interaction)
+```
+
+# Lasso:
+```{r}
+# Load required packages
+library(glmnet)
+library(yardstick)
+
+# Prepare matrix and target
+X <- model_data |>
+  select(age, weighted_per_total, salary_share) |>
+  as.matrix()
+
+y <- model_data$salary
+
+# Fit LASSO model with cross-validation
+model_lasso <- cv.glmnet(X, y, alpha = 1)
+
+# Make predictions and calculate residuals
+pred_df <- model_data |>
+  mutate(
+    predicted_salary_lasso = predict(model_lasso, newx = X, s = "lambda.min") |> as.numeric(),
+    residual_lasso = salary - predicted_salary_lasso
+  )
+
+# Model performance
+tibble(
+  truth = y,
+  estimate = predict(model_lasso, newx = X, s = "lambda.min") |> as.numeric()
+) |>
+  metrics(truth = truth, estimate = estimate)
+
+# Plot predicted vs. actual salary
+ggplot(pred_df, aes(x = predicted_salary_lasso, y = salary)) +
+  geom_point(alpha = 0.6, color = "steelblue") +
+  geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "gray") +
+  labs(
+    title = "Actual vs. Predicted Salary (LASSO Regression)",
+    x = "Predicted Salary",
+    y = "Actual Salary"
+  ) +
+  theme_minimal()
+
+
+###### retrying LASSO regression
+
+#  Create X and y
+X <- model.matrix(salary ~ age + weighted_per_total + salary_share, data = model_data)[, -1]
+y <- model_data$salary
+
+#  Fit LASSO
+cv_lasso <- cv.glmnet(X, y, alpha = 1)
+
+plot(cv_lasso, xvar = "lambda")
+
+coef(cv_lasso, s = "lambda.min")
+coef(cv_lasso, s = "lambda.1se")
+
+# Model performance
+lasso_pred <- predict(cv_lasso, newx = X, s = "lambda.min")
+
+metrics(
+  data = tibble(truth = y, estimate = as.numeric(lasso_pred)),
+  truth = truth,
+  estimate = estimate
+)
+# RSME: 13k with a R^2 of 0.946
+# really high R^2
+```
+
+# (LEAVE OUT) first cross validation attempts
+```{r}
+### Cross-validation for model comparison: LASSO, Polynomial, Linear, Ridge, Random Forest, XGBoost
+
+# set.seed(100)
+# N_FOLDS <- 5
+# 
+# # Assign folds to already-cleaned model_data
+# model_data_cv <- model_data |>
+#   mutate(fold = sample(rep(1:N_FOLDS, length.out = n())))
+# 
+# wnba_cv <- function(fold_num) {
+#   test_data <- model_data_cv |> filter(fold == fold_num)
+#   train_data <- model_data_cv |> filter(fold != fold_num)
+#   
+#   # Linear model
+#   lm_fit <- lm(salary ~ age + weighted_per_total + salary_share, data = train_data)
+#   
+#   # Polynomial model
+#   poly_fit <- lm(salary ~ poly(age, 2) + weighted_per_total + salary_share, data = train_data)
+#   
+#   # LASSO model
+#   X_train <- model.matrix(salary ~ age + weighted_per_total + salary_share, data = train_data)[, -1]
+#   y_train <- train_data$salary
+#   lasso_fit <- cv.glmnet(X_train, y_train, alpha = 1)
+#   
+#   # Ridge model
+#   ridge_fit <- cv.glmnet(X_train, y_train, alpha = 0)
+#   
+#   # Prepare test matrix
+#   X_test <- model.matrix(salary ~ age + weighted_per_total + salary_share, data = test_data)[, -1]
+#   
+#   out <- tibble(
+#     lm_pred = predict(lm_fit, newdata = test_data),
+#     poly_pred = predict(poly_fit, newdata = test_data),
+#     lasso_pred = predict(lasso_fit, newx = X_test, s = "lambda.min") |> as.numeric(),
+#     ridge_pred = predict(ridge_fit, newx = X_test, s = "lambda.min") |> as.numeric(),
+#     actual = test_data$salary,
+#     fold = fold_num
+#   )
+#   return(out)
+# }
+# 
+# cv_results <- map_dfr(1:N_FOLDS, wnba_cv)
+# 
+# cv_long <- cv_results |>
+#   pivot_longer(cols = ends_with("_pred"), names_to = "model", values_to = "prediction")
+# 
+# cv_summary <- cv_long |>
+#   group_by(model, fold) |>
+#   summarise(rmse = rmse_vec(actual, prediction), .groups = "drop")
+# 
+# cv_summary_stats <- cv_summary |>
+#   group_by(model) |>
+#   summarise(
+#     avg_cv_rmse = mean(rmse),
+#     sd_rmse = sd(rmse),
+#     k = n(),
+#     se_rmse = sd_rmse / sqrt(k),
+#     lower_rmse = avg_cv_rmse - se_rmse,
+#     upper_rmse = avg_cv_rmse + se_rmse
+#   ) |>
+#   arrange(avg_cv_rmse)
+# 
+# # Order models by performance
+# model_order <- cv_summary_stats |> pull(model)
+# 
+# cv_summary |>
+#   mutate(model = factor(model, levels = model_order)) |>
+#   ggplot(aes(x = model, y = rmse)) +
+#   geom_point(size = 4, alpha = 0.7) +
+#   stat_summary(fun = mean, geom = "point", color = "red", size = 4) + 
+#   stat_summary(fun.data = mean_se, geom = "errorbar", color = "red", width = 0.2) +
+#   scale_x_discrete(labels = c(
+#     lm_pred = "Linear Model",
+#     poly_pred = "Polynomial (Age²)",
+#     lasso_pred = "LASSO",
+#     ridge_pred = "Ridge"
+#   )) +
+#   labs(
+#     title = "5-Fold Cross-Validation RMSE by Model",
+#     x = "Model Type",
+#     y = "RMSE (Salary)"
+#   ) +
+#   theme_minimal()
+# 
+# ### Adding Random Forest Model
+# 
+# # Fitting a plain random forest model with no tuning
+# library(ranger)
+# salary_rf <- ranger(salary ~ age + weighted_per_total + salary_share, 
+#                    num.trees = 500, importance = "impurity", data = model_data)
+# salary_rf
+# 
+# # Looking at variable importance
+# library(vip)
+# vip(salary_rf)
+# 
+# # Model Evaluation
+# model_data |> 
+#   mutate(pred = salary_rf$predictions) |> 
+#   summarize(rmse = sqrt(mean((salary - pred) ^ 2)))
+# # RMSE is 14,973k
+# 
+# model_data |>
+#   mutate(pred = salary_rf$predictions) |>
+#   ggplot(aes(salary, pred)) +
+#   geom_point(alpha = 0.5) +
+#   geom_abline(slope = 1, intercept = 0, linetype = "dashed")
+# 
+# # Now, need to work on tuning RF
+# 
+# ### Trying XGBoost
+# 
+# # Prepare training matrix
+# xg_train1 <- model_data |>
+#   select(age, weighted_per_total, salary_share) |>
+#   as.matrix()
+# 
+# yg_train1 <- model_data$salary  # continuous target variable
+# 
+# # Create hyperparameter grid
+# xg_grid1 <- crossing(
+#   nrounds = seq(20, 150, 10),
+#   eta = c(0.01, 0.05, 0.1),
+#   gamma = 0,
+#   max_depth = c(2, 3, 4),
+#   colsample_bytree = 1,
+#   min_child_weight = 1,
+#   subsample = 1
+# )
+# 
+# # Set seed and tune
+# set.seed(1234)
+# xg_tune1 <- train(
+#   x = xg_train1,
+#   y = yg_train1,
+#   tuneGrid = xg_grid1,
+#   trControl = trainControl(method = "cv", number = 5),
+#   method = "xgbTree",
+#   metric = "RMSE"
+# )
+# 
+# # Fit final model
+# xg_fit <- xgboost(
+#   data = xg_train1,
+#   label = yg_train1,
+#   objective = "reg:squarederror",
+#   nrounds = xg_tune1$bestTune$nrounds,
+#   params = as.list(select(xg_tune1$bestTune, -nrounds)),
+#   verbose = 0
+# )
+# 
+# library(vip)
+# xg_fit |> 
+#   vip()
+
+# cross validation attempt
+# wnba_cv3 <- function(fold_num) {
+#   test_data <- model_data_cv |> filter(fold == fold_num)
+#   train_data <- model_data_cv |> filter(fold != fold_num)
+#   
+#   # Linear model
+#   lm_fit <- lm(salary ~ age + weighted_per_total + salary_share, data = train_data)
+#   
+#   # Polynomial model
+#   poly_fit <- lm(salary ~ poly(age, 2) + weighted_per_total + salary_share, data = train_data)
+#   
+#   # Model matrices for LASSO/Ridge
+#   X_train <- model.matrix(salary ~ age + weighted_per_total + salary_share, data = train_data)[, -1]
+#   X_test  <- model.matrix(salary ~ age + weighted_per_total + salary_share, data = test_data)[, -1]
+#   y_train <- train_data$salary
+#   
+#   # LASSO model
+#   lasso_fit <- cv.glmnet(X_train, y_train, alpha = 1)
+#   
+#   # Ridge model
+#   ridge_fit <- cv.glmnet(X_train, y_train, alpha = 0)
+#   
+#   # XGBoost
+#   xgb_train <- train_data |> select(age, weighted_per_total, salary_share) |> as.matrix()
+#   xgb_test  <- test_data  |> select(age, weighted_per_total, salary_share) |> as.matrix()
+#   
+#   xgb_fit <- xgboost(
+#     data = xgb_train,
+#     label = y_train,
+#     objective = "reg:squarederror",
+#     nrounds = 100,
+#     max_depth = 3,
+#     eta = 0.1,
+#     verbose = 0
+#   )
+#   
+#   # Predictions
+#   out <- tibble(
+#     lm_pred = predict(lm_fit, newdata = test_data),
+#     poly_pred = predict(poly_fit, newdata = test_data),
+#     lasso_pred = predict(lasso_fit, newx = X_test, s = "lambda.min") |> as.numeric(),
+#     ridge_pred = predict(ridge_fit, newx = X_test, s = "lambda.min") |> as.numeric(),
+#     xgb_pred = predict(xgb_fit, newdata = xgb_test),
+#     actual = test_data$salary,
+#     fold = fold_num
+#   )
+#   
+#   return(out)
+# }
+# 
+
+```
+
+
+
+```{r}
+set.seed(100)
+N_FOLDS <- 5
+
+# Assign folds to already-cleaned model_data
+model_data_cv <- model_data |>
+  mutate(fold = sample(rep(1:N_FOLDS, length.out = n())))
+
+#adding CV for a further tuned model 
+wnba_cv4 <- function(fold_num) {
+  test_data <- model_data_cv |> filter(fold == fold_num)
+  train_data <- model_data_cv |> filter(fold != fold_num)
+  
+  # Linear model
+  lm_fit <- lm(salary ~ age + weighted_per_total + salary_share, data = train_data)
+  
+  # Polynomial model
+  poly_fit <- lm(salary ~ poly(age, 2) + weighted_per_total + salary_share, data = train_data)
+  
+  # Model matrices for LASSO/Ridge
+  X_train <- model.matrix(salary ~ age + weighted_per_total + salary_share, data = train_data)[, -1]
+  X_test  <- model.matrix(salary ~ age + weighted_per_total + salary_share, data = test_data)[, -1]
+  y_train <- train_data$salary
+  
+  # LASSO model
+  lasso_fit <- cv.glmnet(X_train, y_train, alpha = 1)
+  
+  # Ridge model
+  ridge_fit <- cv.glmnet(X_train, y_train, alpha = 0)
+  
+  # XGBoost tuning with caret
+  library(caret)
+  xgb_grid <- expand.grid(
+    nrounds = c(50, 100),
+    max_depth = c(2, 3),
+    eta = c(0.05, 0.1),
+    gamma = 0,
+    colsample_bytree = 1,
+    min_child_weight = 1,
+    subsample = 1
+  )
+  
+  xgb_train <- train_data |> select(age, weighted_per_total, salary_share) |> as.matrix()
+  xgb_test  <- test_data  |> select(age, weighted_per_total, salary_share) |> as.matrix()
+  
+  set.seed(42 + fold_num)  # different seed per fold
+  xgb_tune <- train(
+    x = xgb_train,
+    y = y_train,
+    method = "xgbTree",
+    tuneGrid = xgb_grid,
+    trControl = trainControl(method = "cv", number = 3),  # inner CV
+    metric = "RMSE",
+    verbose = FALSE
+  )
+  
+  xgb_pred <- predict(xgb_tune, newdata = xgb_test)
+  
+  # Combine predictions
+  out <- tibble(
+    lm_pred = predict(lm_fit, newdata = test_data),
+    poly_pred = predict(poly_fit, newdata = test_data),
+    lasso_pred = predict(lasso_fit, newx = X_test, s = "lambda.min") |> as.numeric(),
+    ridge_pred = predict(ridge_fit, newx = X_test, s = "lambda.min") |> as.numeric(),
+    xgb_pred = xgb_pred,
+    actual = test_data$salary,
+    fold = fold_num, 
+    player = test_data$player,
+    team = test_data$team
+  )
+  
+  return(out)
+}
+
+
+
+cv_results <- map_dfr(1:N_FOLDS, wnba_cv4) # insert version of wnba_cv4
+
+cv_results_named <- cv_results |>
+  left_join(per_df |> select(player, pos), by = "player")
+
+cv_long <- cv_results |>
+  pivot_longer(cols = ends_with("_pred"),
+               names_to = "model", values_to = "prediction")
+
+
+cv_summary <- cv_long |>
+  group_by(model, fold) |>
+  summarise(rmse = rmse_vec(actual, prediction), .groups = "drop")
+
+cv_summary_stats <- cv_summary |>
+  group_by(model) |>
+  summarise(
+    avg_cv_rmse = mean(rmse),
+    sd_rmse = sd(rmse),
+    k = n(),
+    se_rmse = sd_rmse / sqrt(k),
+    lower_rmse = avg_cv_rmse - se_rmse,
+    upper_rmse = avg_cv_rmse + se_rmse
+  ) |>
+  arrange(avg_cv_rmse)
+
+# Order model factor levels by average RMSE
+model_order <- cv_summary_stats |> arrange(avg_cv_rmse) |> pull(model)
+
+cv_summary |>
+  mutate(model = factor(model, levels = model_order)) |>
+  ggplot(aes(x = model, y = rmse)) +
+  geom_point(size = 4, alpha = 0.7) +
+  stat_summary(fun = mean, geom = "point", color = "red", size = 4) +
+  stat_summary(fun.data = mean_se, geom = "errorbar", color = "red", width = 0.2) +
+  scale_x_discrete(labels = c(
+    lm_pred = "Linear Model",
+    poly_pred = "Polynomial (Age²)",
+    lasso_pred = "LASSO",
+    ridge_pred = "Ridge",
+    xgb_pred = "XGBoost"
+  )) +
+  labs(
+    title = "5-Fold Cross-Validation RMSE by Model",
+    x = "Model Type",
+    y = "RMSE (Salary)"
+  ) +
+  theme_minimal()
+
+
+library(ggplot2)
+library(dplyr)
+
+# Filter to XGBoost predictions only
+xgb_preds <- cv_results |> 
+  select(actual, xgb_pred)
+
+
+library(scales)
+xgb_preds <- cv_results |> 
+  select(actual, xgb_pred) |>
+  mutate(residual = xgb_pred - actual)
+
+ggplot(xgb_preds, aes(x = actual, y = xgb_pred, color = residual)) +
+  geom_point(alpha = 0.6, size = 2) +
+  geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "gray40") +
+  scale_x_continuous(labels = dollar_format(prefix = "$")) +
+  scale_y_continuous(labels = dollar_format(prefix = "$")) +
+  scale_color_gradient2(
+    low = "#d73027",    # red for negative residual (overpaid)
+    mid = "#d3d3d3",    # light gray near zero residual
+    high = "#1a9850",   # green for positive residual (underpaid)
+    midpoint = 0,
+    name = "Residual\n(Predicted - Actual)"
+  ) +
+  labs(
+    title = "XGBoost Predicted vs. Actual WNBA 2025 Salaries",
+    x = "Actual 2025 Salary",
+    y = "Predicted 2025 Salary"
+  ) +
+  theme_minimal(base_size = 15) +
+  theme(
+    plot.title = element_text(face = "bold", hjust = 0.5),
+    axis.title = element_text(face = "bold"),
+    legend.title = element_text(face = "bold")
+  )
+
+
+
+
+ggplot(xgb_preds, aes(x = actual, y = xgb_pred, color = residual)) +
+  geom_point(alpha = 0.8, size = 2) +
+  geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "gray40") +
+  scale_x_continuous(labels = dollar_format(prefix = "$")) +
+  scale_y_continuous(labels = dollar_format(prefix = "$")) +
+  scale_color_gradient2(
+    low = "#8C6BB1",    # Blue or whatever you choose
+    mid = "#D3D3D3",    # Light grey for zero
+    high = "#66C2A5",   # Orange or green or your pick
+    midpoint = 0,
+    name = "Residual\n(Predicted - Actual)"
+  ) +
+  labs(
+    title = "XGBoost Predicted vs. Actual WNBA 2025 Salaries",
+    x = "Actual 2025 Salary",
+    y = "Predicted 2025 Salary"
+  ) +
+  theme_minimal(base_size = 15) +
+  theme(
+    plot.title = element_text(face = "bold", hjust = 0.5),
+    axis.title = element_text(face = "bold"),
+    legend.title = element_text(face = "bold")
+  )
+
+
+
+ggplot(xgb_preds, aes(x = actual, y = xgb_pred, color = residual)) +
+  geom_point(alpha = 0.7, size = 2) +
+  geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "gray40") +
+  scale_x_continuous(labels = dollar_format(prefix = "$")) +
+  scale_y_continuous(labels = dollar_format(prefix = "$")) +
+  scale_color_gradient2(
+    low = "firebrick",      # uverpaid
+    mid = "gray80",           # fair
+    high =  "forestgreen",       #underpaid
+    midpoint = 0
+   # name = "Estimated Team Savings"
+  ) +
+  labs(
+    title = "XGBoost Predicted vs. Actual WNBA 2025 Salaries",
+    x = "Actual 2025 Salary",
+    y = "Predicted 2025 Salary"
+  ) +
+  theme_minimal(base_size = 15) +
+  theme(
+    plot.title = element_text(hjust = 0.5),
+    axis.title = element_text(),
+    legend.title = element_text()
+  )
+
+
+#thinking about how to rank top players 
+
+xgboost_preds <- cv_results_named |>
+  select(player, team, pos, actual, xgb_pred) |>
+  mutate(residual = xgb_pred - actual)
+
+top_underpaid <- xgboost_preds |>
+  arrange(desc(residual)) |>
+  select(player, team, pos, actual, xgb_pred, residual)
+
+top_underpaid |>
+  mutate(across(c(actual, xgb_pred, residual), scales::dollar_format()))
+
+
+underpaid_by_position <- xgboost_preds |>
+  filter(residual > 0) |>
+  group_by(pos) |>
+  arrange(desc(residual), .by_group = TRUE) |>
+  slice_head(n = 5)  # top 5 per position
+
+underpaid_players <- xgboost_preds |>
+  mutate(residual = xgb_pred - actual) |>
+  filter(residual > 0)  # only underpaid
+
+underpaid_ranked <- underpaid_players |>
+  group_by(pos) |>
+  arrange(desc(residual), .by_group = TRUE) |>
+  mutate(rank_within_pos = row_number()) |>
+  ungroup()
+
+underpaid_ranked |>
+  group_by(pos) |>
+  slice_max(residual, n = 5, with_ties = FALSE) |>
+  select(pos, rank_within_pos, player, team, actual, xgb_pred, residual) |>
+  arrange(pos, rank_within_pos)
+
+
+underpaid_players |>
+  group_by(pos) |>
+  slice_max(residual, n = 1, with_ties = FALSE) |>
+  ungroup() |>
+  select(player, pos, actual, xgb_pred, residual) |>
+  arrange(desc(residual)) |>
+  mutate(
+    actual = scales::dollar(actual),
+    xgb_pred = scales::dollar(xgb_pred),
+    residual = scales::dollar(residual)
+  )
+
+
+#' Create a table of most underpaid players by position
+#'
+#' @param underpaid_players A data frame with columns: player, pos, actual, xgb_pred, residual
+#' @return A formatted data frame with dollar-formatted columns
+#' @export
+get_top_underpaid_by_pos <- function(underpaid_players) {
+  underpaid_players |>
+    group_by(pos) |>
+    slice_max(residual, n = 1, with_ties = FALSE) |>
+    ungroup() |>
+    select(player, pos, actual, xgb_pred, residual) |>
+    arrange(desc(residual)) |>
+    mutate(
+      actual = scales::dollar(actual),
+      xgb_pred = scales::dollar(xgb_pred),
+      residual = scales::dollar(residual)
+    )
+}
+
+```
+
