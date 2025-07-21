@@ -1,0 +1,189 @@
+---
+title: "Research Report"
+author:
+  - Author 1
+  - Author 2
+  - Author 3
+date: "July 25, 2025"
+toc: true
+format:
+  html:
+    theme: cosmo
+    html-math-method: katex
+    self-contained: true
+execute:
+  echo: false
+  warning: false
+  message: false
+---
+
+---
+
+## Introduction 
+
+Describe the problem and why it is important.
+
+## Data
+
+Describe the data you’re using in detail, where you accessed it, along with relevant exploratory data analysis (EDA). You should also include descriptions of any relevant data pre-processing steps (e.g., whether you consider specific observations, create any meaningful features, etc.---but don't mention minor steps like column type conversion, filtering out unnecessary rows)
+
+```{r}
+#| echo: false
+
+# loading the data
+model_data <- read_csv("salary_model_df.csv")
+model_df_scaled <- read_csv("model_df_scaled.csv")
+eda_df <- read_csv("eda_df.csv")
+```
+
+### EDA
+```{r}
+# Define the nine star players to highlight
+star_players <- c(
+  "caitlin clark", "arike ogunbowale", "a'ja wilson",
+  "breanna stewart", "aliyah boston", "sabrina ionescu",
+  "napheesa collier", "paige bueckers", "kelsey plum"
+)
+
+# Filter the data for labeling
+star_df <- eda_df %>% filter(player %in% star_players)
+
+star_df <-star_df <- star_df %>%
+  mutate(
+    nudge_x = case_when(
+      player == "arike ogunbowale"  ~ -2,
+      # player == "a'ja wilson"       ~ 1,
+      # player == "breanna stewart"   ~ 2,
+      # player == "aliyah boston"     ~ -3,
+      # player == "sabrina ionescu"   ~ 1.5,
+      player == "napheesa collier"  ~ 10,
+      player == "paige bueckers"    ~ 10,
+      player == "kelsey plum"       ~ -20,
+      TRUE                         ~ 0
+    ),
+    nudge_y = case_when(
+      player == "arike ogunbowale"  ~ -5,
+      # player == "a'ja wilson"       ~ 10,
+      # player == "breanna stewart"   ~ 7,
+      # player == "aliyah boston"     ~ -8,
+      player == "sabrina ionescu"   ~ 10,
+      player == "napheesa collier"  ~ -5,
+      player == "paige bueckers"    ~ 30,
+      player == "kelsey plum"       ~ 10,
+      TRUE                         ~ 0
+    )
+  )
+
+ggplot(eda_df, aes(x = per, y = salary_clean)) +
+  # Highlight rookie salary range
+  annotate("rect",
+           xmin = -Inf, xmax = Inf,
+           ymin = 66000, ymax = 78000,
+           fill = "red", alpha = 0.15) +
+  # Base scatter
+  geom_point(alpha = 0.7, size = 3, color = "#1f78b4") +
+  geom_label_repel(
+    data = star_df,
+    aes(label = player),
+    size = 3.5,
+    box.padding = 0.3,
+    point.padding = 0.2,
+    segment.color = "gray50",
+    segment.size = 0.7,
+    min.segment.length = 0,
+    direction = "y", # prefer vertical adjustment to avoid overlap
+    alpha = 0.7
+  ) +
+  # Lines at key salary thresholds
+  geom_hline(yintercept = 66000,  linetype = "dashed", color = "red", alpha = 0.5) +
+  geom_hline(yintercept = 78000,  linetype = "dashed", color = "red", alpha = 0.5) +
+  geom_hline(yintercept = 214000, linetype = "dashed", color = "green") +
+  geom_hline(yintercept = 250000, linetype = "dashed", color = "blue") +
+  labs(
+    title = "Player Efficiency vs WNBA Salary 2025",
+    x = "Player Efficiency Rating (PER)",
+    y = "Salary (USD)",
+  ) +
+  scale_y_continuous(labels = dollar_format(),
+                     breaks = seq(0, 300000, by = 40000)) +
+  scale_x_continuous(breaks = seq(0, max(salary_stat$per) + 5, by = 5),
+                     limits = c(0, max(salary_stat$per) + 10)) +
+  theme_classic(base_size = 14) +
+  theme(
+    plot.title = element_text(face = "bold", size = 18),
+    plot.subtitle = element_text(size = 12, margin = margin(b = 10)),
+    axis.title = element_text(face = "bold")
+  )
+```
+
+
+
+## Methods
+
+Describe the modeling techniques you chose, their assumptions, justifications for why they are appropriate for the problem, and how you're comparing/evaluating the different methods.
+
+## Results
+
+Describe your results. This can include tables and plots showing your results, as well as text describing how your models worked and the appropriate interpretations of the relevant output. (Note: Don’t just write out the textbook interpretations of all model coefficients. Instead, interpret the output that is relevant for your question of interest that is framed in the introduction)
+
+## Discussion
+
+Give your conclusions and summarize what you have learned with regards to your question of interest. Are there any limitations with the approaches you used? What do you think are the next steps to follow-up your project?
+
+## Appendix: A quick tutorial
+
+
+
+### Figures
+
+If a code block produces a plot or figure, this figure will automatically be inserted inline in the report. That is, it will be inserted exactly where the code block is.
+
+```{r}
+#| fig-width: 5
+#| fig-height: 3.5
+#| fig-cap: "This is a caption. It should explain what's in the figure and what's interesting about it. For instance: There is a negative, strong linear correlation between miles per gallon and horsepower for US cars in the 1970s."
+
+library(tidyverse)
+mtcars |> 
+  ggplot(aes(x = mpg, y = hp)) +
+  geom_point() +
+  labs(x = "Miles per gallon",
+       y = "Horsepower")
+```
+
+Notice the use of `fig-width` and `fig-height` to control the figure's size (in inches). 
+These control the sizes given to `R` when it generates the plot, so `R` proportionally adjusts the font sizes to be large enough.
+
+
+
+
+
+```{r}
+
+ggplot(data = model_df_scaled, 
+       aes(x = actual, y = xgb_pred, color = residual)) +
+  geom_point(alpha = 0.7, size = 2) +
+  geom_abline(slope = 1, intercept = 0, 
+              linetype = "dashed", color = "gray40") +
+  scale_x_continuous(labels = dollar_format(prefix = "$")) +
+  scale_y_continuous(labels = dollar_format(prefix = "$")) +
+  scale_color_gradient2(
+    low = "firebrick",      # uverpaid
+    mid = "gray80",           # fair
+    high =  "forestgreen",       #underpaid
+    midpoint = 0
+   # name = "Estimated Team Savings"
+  ) +
+  labs(
+    title = "XGBoost Predicted vs. Actual WNBA 2025 Salaries",
+    x = "Actual 2025 Salary",
+    y = "Predicted 2025 Salary"
+  ) +
+  theme_minimal(base_size = 15) +
+  theme(
+    plot.title = element_text(hjust = 0.5),
+    axis.title = element_text(),
+    legend.title = element_text()
+  )
+```
+
