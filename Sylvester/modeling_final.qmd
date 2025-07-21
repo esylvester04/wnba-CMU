@@ -1108,6 +1108,7 @@ top_underpaid <- top_underpaid |>
 top_underpaid_formatted <- top_underpaid |>
   mutate(across(c(actual, xgb_pred, residual), scales::dollar_format()))
 
-write.csv(top_underpaid_formatted, "salary_model_df.csv", row.names = FALSE)
+#creating the csv file with predictions and residuals 
+# write.csv(top_underpaid_formatted, "salary_model_df.csv", row.names = FALSE)
 ```
 
