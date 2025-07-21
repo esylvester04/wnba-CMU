@@ -889,6 +889,65 @@ players_ranked <- players_weighted %>%
 # to predict the probability that a player is oging to be protected
 # to predict a players performance in the next year, predicting their per/rating
 
+p_salary<- p_salary %>% 
+  mutate(player = stri_trans_general(player, "Latin-ASCII"),
+         player = str_trim(player),
+         player = str_to_lower(player),
+         player = str_replace_all(player, "-", " "),  # Replace hyphen with space
+         player = str_replace(player, "^([\\w']+)\\s+.*\\s+([\\w']+)$", "\\1 \\2"))
+
+
+salary_model_df<- salary_model_df %>% 
+  mutate(player = stri_trans_general(player, "Latin-ASCII"),
+                         player = str_trim(player),
+                         player = str_to_lower(player),
+                         player = str_replace_all(player, "-", " "),  # Replace hyphen with space
+                         player = str_replace(player, "^([\\w']+)\\s+.*\\s+([\\w']+)$", "\\1 \\2"))
+
+
+player_ranked_salary <- players_ranked_u_clean %>%
+  full_join(salary_model_df, by = "player")
+
+
+
+player_ranked_salary <- player_ranked_salary %>% select(player,weighted_mp,weighted_ws,weighted_per,
+                                                        team.x, contract_y,age,per_minute_score,rank_within_team,
+                                                        protected,pos, actual, xgb_pred, residual)
+
+colnames(player_ranked_salary)
+
+write.csv(player_ranked_salary, "players_ranked_salary.csv")
+
+player_ranked_salary<- read_csv("players_ranked_salary.csv")
+
+p_salary <- p_salary %>% select(player,ufa,suspended)
+
+
+player_ranked_salary_ufa <- player_ranked_salary %>% left_join(
+  p_salary, by= "player"
+)
+
+
+
+unprotected_player_ranked_salary<- player_ranked_salary_ufa %>% filter(protected==0)
+
+
+
+colnames(unprotected_player_ranked_salary)
+
+unprotected_player_ranked_salary <- unprotected_player_ranked_salary %>% select(player,team.x, weighted_mp,weighted_ws,weighted_per,contract_y.x, per_minute_score, 
+             rank_within_team,protected, pos, age,actual, xgb_pred, residual, suspended, salary_proportion,team_total_salary)
+
+
+
+centers <- unprotected_player_ranked_salary %>% filter(pos== "C")
+c_f <- unprotected_player_ranked_salary %>% filter(pos== "C-F")
+f <- unprotected_player_ranked_salary %>% filter(pos== "F")
+f_c <- unprotected_player_ranked_salary
+
+
+
+
 
 
 

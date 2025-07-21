@@ -119,6 +119,34 @@ players_weighted_final <- players_weighted_summarised %>%
   right_join(c_years, by = "player")
 
 
+players_weighted_final_a <- players_weighted_final %>%
+  left_join(ages %>% select(player, age), by = "player")
+
+players_weighted_final_a <- players_ranked_u %>%
+  mutate(
+    age = case_when(
+      player == "te paopao" ~ 22,
+      player == "shatori kimbrough" ~ 30,
+      player == "cameron brink" ~23,
+      player == "iliana rupert" ~24,
+      player== "shatori kimbrough" ~ 30,
+      player == "hailey lith" ~23,
+      player == "olivia ododa"~24,
+      player== "myisha allen" ~29,
+      player== "katie samuelson" ~ 28,
+      player=="sarah barker" ~23,
+      player== "megan gustafson"~28,
+      player=="anastasiia kosu" ~20,
+      player == "dorka juhasz" ~ 25,
+      player== "betnijah hamilton"~ 21,
+      player== "monique makani"~ 24,
+      player == "jordan horston"~ 24,
+      player == "nika muhl"~ 24,
+      TRUE ~ age
+    )
+  )
+
+
 # players_ranked %>%
 #   select(team, player, weighted_mp, weighted_ws, per_minute_score, protected) %>%
 #   arrange(team, desc(per_minute_score))
@@ -143,13 +171,14 @@ players_weighted_final <- players_weighted_summarised %>%
 #   ungroup()
 
 
-players_ranked_u <- players_weighted_final %>%
+players_ranked_u <- players_weighted_final_a %>%
   group_by(team) %>%
   mutate(
     per_minute_score =
-      0.3*scale(weighted_ws) +
-      0.1*scale(weighted_per) +
-      0.2 * scale(contract_y)
+      0.2*scale(weighted_ws) +
+      0.3*scale(weighted_per) +
+      0.1 * scale(contract_y) -
+      0.2 * scale(age)
   ) %>%
   arrange(team, desc(per_minute_score)) %>%
   mutate(
@@ -161,6 +190,22 @@ players_ranked_u <- players_weighted_final %>%
 library(shiny)
 library(ggplot2)
 library(dplyr)
+
+players_ranked_ua <- players_weighted_final_a %>%
+  group_by(team) %>%
+  mutate(
+    per_minute_score =
+      0.2*scale(weighted_ws) +
+      0.3*scale(weighted_per) +
+      0.1 * scale(contract_y) -
+      0.3 * scale(age)
+  ) %>%
+  arrange(team, desc(per_minute_score)) %>%
+  mutate(
+    rank_within_team = row_number(),
+    protected = if_else(rank_within_team <= 5, 1, 0)
+  ) %>%
+  ungroup()
 
 
 

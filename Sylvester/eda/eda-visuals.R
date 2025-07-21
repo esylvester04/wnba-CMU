@@ -764,7 +764,6 @@ star_players <- c(
 # Filter the data for labeling
 star_df <- salary_stat %>% filter(player %in% star_players)
 
-
 star_df <-star_df <- star_df %>%
   mutate(
     nudge_x = case_when(
@@ -791,6 +790,8 @@ star_df <-star_df <- star_df %>%
     )
   )
 
+# model data scaled 
+#write.csv(salary_stat, "eda_df.csv", row.names = FALSE)
 
 ggplot(salary_stat, aes(x = per, y = salary_clean)) +
   # Highlight rookie salary range

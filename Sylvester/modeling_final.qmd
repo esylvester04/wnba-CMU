@@ -84,7 +84,6 @@ get_wnba_data1 <- function() {
   ))
 }
 ```
-
 # trying to fix 
 ```{r}
 get_wnba_data2 <- function() {
@@ -180,8 +179,6 @@ get_wnba_data2 <- function() {
 }
 
 ```
-
-# again 
 ```{r}
 get_wnba_data3 <- function() {
   # Load advanced stats from CSV
@@ -346,7 +343,7 @@ get_wnba_data <- function() {
 }
 ```
 
-
+#loading data
 ```{r}
 library(dplyr)
 library(tidyr)
@@ -806,7 +803,7 @@ metrics(
 ```
 
 
-
+# cross validation , visualizations 
 ```{r}
 set.seed(100)
 N_FOLDS <- 5
@@ -1030,11 +1027,13 @@ xgboost_preds <- cv_results_named |>
   select(player, team, pos, actual, xgb_pred) |>
   mutate(residual = xgb_pred - actual)
 
-top_underpaid <- xgboost_preds |>
+model_data_scaled <- xgboost_preds |>
   arrange(desc(residual)) |>
   select(player, team, pos, actual, xgb_pred, residual)
 
-top_underpaid |>
+top_underpaid <- xgboost_preds |>
+  arrange(desc(residual)) |>
+  select(player, team, pos, actual, xgb_pred, residual) |>
   mutate(across(c(actual, xgb_pred, residual), scales::dollar_format()))
 
 
@@ -1095,6 +1094,7 @@ get_top_underpaid_by_pos <- function(underpaid_players) {
 
 ```
 
+
 ```{r}
 library(dplyr)
 library(scales)
@@ -1110,5 +1110,37 @@ top_underpaid_formatted <- top_underpaid |>
 
 #creating the csv file with predictions and residuals 
 # write.csv(top_underpaid_formatted, "salary_model_df.csv", row.names = FALSE)
+
+# model data scaled 
+#write.csv(model_data_scaled, "model_df_scaled.csv", row.names = FALSE)
+```
+
+
+
+```{r}
+
+ggplot(xgb_preds, aes(x = actual, y = xgb_pred, color = residual)) +
+  geom_point(alpha = 0.7, size = 2) +
+  geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "gray40") +
+  scale_x_continuous(labels = dollar_format(prefix = "$")) +
+  scale_y_continuous(labels = dollar_format(prefix = "$")) +
+  scale_color_gradient2(
+    low = "firebrick",      # uverpaid
+    mid = "gray80",           # fair
+    high =  "forestgreen",       #underpaid
+    midpoint = 0
+   # name = "Estimated Team Savings"
+  ) +
+  labs(
+    title = "XGBoost Predicted vs. Actual WNBA 2025 Salaries",
+    x = "Actual 2025 Salary",
+    y = "Predicted 2025 Salary"
+  ) +
+  theme_minimal(base_size = 15) +
+  theme(
+    plot.title = element_text(hjust = 0.5),
+    axis.title = element_text(),
+    legend.title = element_text()
+  )
 ```
 
