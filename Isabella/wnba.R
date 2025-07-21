@@ -11,32 +11,32 @@ library(broom)
 
 ######        Season Level Stats        ############
 
-# url_2022<- "https://www.basketball-reference.com/wnba/years/2022_per_game.html"
-# 
-# wnba_2022<- read_html(url_2022) %>% 
-#   html_element("table.stats_table") %>% html_table()
-# 
-# wnba_2022 <- wnba_2022 %>% clean_names() %>% 
-#   select(-g_2, -mp_2, -gs, -pf)
-# 
-# 
-# url_2023 <- "https://www.basketball-reference.com/wnba/years/2023_per_game.html"
-# 
-# wnba_2023<- read_html(url_2023) %>% 
-#   html_element("table.stats_table") %>% html_table()
-# 
-# wnba_2023 <- wnba_2023 %>% clean_names() %>% 
-#   select(-g_2, -mp_2, -gs, -pf)
-# 
-# 
-# url_2024 <- "https://www.basketball-reference.com/wnba/years/2024_per_game.html"
-# 
-# wnba_2024<- read_html(url_2024) %>% 
-#   html_element("table.stats_table") %>% html_table()
-# 
-# wnba_2024 <- wnba_2024 %>% clean_names() %>% 
-#   select(-g_2, -mp_2, -gs, -pf)
-# 
+url_2022<- "https://www.basketball-reference.com/wnba/years/2022_per_game.html"
+
+wnba_2022<- read_html(url_2022) %>%
+  html_element("table.stats_table") %>% html_table()
+
+wnba_2022 <- wnba_2022 %>% clean_names() %>%
+  select(-g_2, -mp_2, -gs, -pf)
+
+
+url_2023 <- "https://www.basketball-reference.com/wnba/years/2023_per_game.html"
+
+wnba_2023<- read_html(url_2023) %>%
+  html_element("table.stats_table") %>% html_table()
+
+wnba_2023 <- wnba_2023 %>% clean_names() %>%
+  select(-g_2, -mp_2, -gs, -pf)
+
+
+url_2024 <- "https://www.basketball-reference.com/wnba/years/2024_per_game.html"
+
+wnba_2024<- read_html(url_2024) %>%
+  html_element("table.stats_table") %>% html_table()
+
+wnba_2024 <- wnba_2024 %>% clean_names() %>%
+  select(-g_2, -mp_2, -gs, -pf)
+
 # 
 # url_2025<- "https://www.basketball-reference.com/wnba/years/2025_per_game.html"
 # # 
