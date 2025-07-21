@@ -56,7 +56,7 @@ players_weighted <- players_wide %>%
       c(0.1, 0.3, 0.6)
     ),
     weighted_mp = weighted_mean_ignore_na(
-      c(mp_2023_, mp_2024, mp_2025),
+      c(mp_2023, mp_2024, mp_2025),
       c(0.1, 0.3, 0.6)
     )
   ) %>%
@@ -158,14 +158,6 @@ players_ranked_u <- players_weighted_final %>%
   ) %>%
   ungroup()
 
-
-
-install.packages("shiny")
-
-
-
-
-
 library(shiny)
 library(ggplot2)
 library(dplyr)
@@ -181,6 +173,8 @@ players_ranked_u_clean <- players_ranked_u %>%
 write.csv(players_ranked_u_clean, "player_protection.csv")
 
 players_ranked_u_clean <- read.csv("player_protection.csv")
+
+
 
 ui <- fluidPage(
   titlePanel("WNBA Expansion Draft - Predicted Protection Status"),
