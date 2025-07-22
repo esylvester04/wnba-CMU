@@ -617,3 +617,4 @@ make_salary_plot2 <- function() {
   ggplotly(p)  # just to confirm the lm appears
   
 }
+
