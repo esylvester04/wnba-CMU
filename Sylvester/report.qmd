@@ -142,12 +142,12 @@ ranked_pos_df <- ranked_df|>
       TRUE ~ "Other"
     )
   ) |>
-  filter(residual > 0) |>
+  #filter(residual > 0) |>
   mutate(
     across(c(actual, xgb_pred, residual), scales::dollar_format())
   )
 
-protected_df <- ranked_pos_df |>
+unprotected_df <- ranked_pos_df |>
   filter(protected == 0)
 
 ```
