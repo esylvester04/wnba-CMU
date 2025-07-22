@@ -1144,3 +1144,16 @@ ggplot(xgb_preds, aes(x = actual, y = xgb_pred, color = residual)) +
   )
 ```
 
+```{r}
+model_data |>
+  count(pos_group = case_when(
+    pos == "G" ~ "Guard",
+    pos == "G-F" ~ "Small Forward",
+    pos %in% c("F", "F-C") ~ "Forward",
+    pos %in% c("C", "C-F") ~ "Center",
+    TRUE ~ "Other"
+  )) |>
+  arrange(desc(n))
+
+```
+

@@ -31,7 +31,7 @@ Describe the data you’re using in detail, where you accessed it, along with re
 #| echo: false
 
 # loading the data
-model_data <- read_csv("salary_model_df.csv")
+model_df <- read_csv("salary_model_df.csv")
 model_df_scaled <- read_csv("model_df_scaled.csv")
 eda_df <- read_csv("eda_df.csv")
 ```
@@ -52,20 +52,12 @@ star_df <-star_df <- star_df %>%
   mutate(
     nudge_x = case_when(
       player == "arike ogunbowale"  ~ -2,
-      # player == "a'ja wilson"       ~ 1,
-      # player == "breanna stewart"   ~ 2,
-      # player == "aliyah boston"     ~ -3,
-      # player == "sabrina ionescu"   ~ 1.5,
-      player == "napheesa collier"  ~ 10,
       player == "paige bueckers"    ~ 10,
       player == "kelsey plum"       ~ -20,
       TRUE                         ~ 0
     ),
     nudge_y = case_when(
       player == "arike ogunbowale"  ~ -5,
-      # player == "a'ja wilson"       ~ 10,
-      # player == "breanna stewart"   ~ 7,
-      # player == "aliyah boston"     ~ -8,
       player == "sabrina ionescu"   ~ 10,
       player == "napheesa collier"  ~ -5,
       player == "paige bueckers"    ~ 30,
@@ -106,14 +98,58 @@ ggplot(eda_df, aes(x = per, y = salary_clean)) +
   ) +
   scale_y_continuous(labels = dollar_format(),
                      breaks = seq(0, 300000, by = 40000)) +
-  scale_x_continuous(breaks = seq(0, max(salary_stat$per) + 5, by = 5),
-                     limits = c(0, max(salary_stat$per) + 10)) +
+  scale_x_continuous(breaks = seq(0, max(eda_df$per) + 5, by = 5),
+                     limits = c(0, max(eda_df$per) + 10)) +
   theme_classic(base_size = 14) +
   theme(
     plot.title = element_text(face = "bold", size = 18),
     plot.subtitle = element_text(size = 12, margin = margin(b = 10)),
     axis.title = element_text(face = "bold")
   )
+
+model_df |> distinct(pos)
+
+
+library(readr)  
+positional_df <- model_df |>
+  mutate(
+    actual = parse_number(actual),
+    xgb_pred = parse_number(xgb_pred),
+    residual = xgb_pred - actual,
+    pos_group = case_when(
+      str_detect(pos, "G") ~ "G",
+      str_detect(pos, "F") ~ "F",
+      str_detect(pos, "C") ~ "C",
+      TRUE ~ "Other"
+    )
+  ) |>
+  filter(residual > 0) |>
+  mutate(
+    across(c(actual, xgb_pred, residual), scales::dollar_format())
+  )
+
+ranked_df <- read_csv("players_ranked_salary_ufa.csv")
+
+ranked_pos_df <- ranked_df|>
+  mutate(
+    actual = parse_number(actual),
+    xgb_pred = parse_number(xgb_pred),
+    residual = xgb_pred - actual,
+    pos_group = case_when(
+      str_detect(pos, "G") ~ "G",
+      str_detect(pos, "F") ~ "F",
+      str_detect(pos, "C") ~ "C",
+      TRUE ~ "Other"
+    )
+  ) |>
+  filter(residual > 0) |>
+  mutate(
+    across(c(actual, xgb_pred, residual), scales::dollar_format())
+  )
+
+protected_df <- ranked_pos_df |>
+  filter(protected == 0)
+
 ```
 
 
