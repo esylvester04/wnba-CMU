@@ -141,3 +141,28 @@ new_dataset <- advanced_stats[ind,]
 # View result
 View(new_dataset)  # or use head(new_dataset)
 
+unprotected <- read_csv("~/Downloads/players_ranked_salary_ufa.csv")
+
+Guards <- unprotected_csv |>
+  filter(pos_group == "G")
+
+
+Forwards <- unprotected_csv |>
+  filter(pos_group == "F")
+
+Centers <- unprotected_csv |>
+  filter(pos_group == "C")
+
+
+
+model_df <- read_csv("salary_model_df.csv")
+model_df_scaled <- read_csv("model_df_scaled.csv")
+eda_df <- read_csv("eda_df.csv")
+
+
+
+
+unprotected_csv <- read_csv("unprotected_df")
+
+
+
