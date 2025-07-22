@@ -147,9 +147,46 @@ ranked_pos_df <- ranked_df|>
     across(c(actual, xgb_pred, residual), scales::dollar_format())
   )
 
+
 unprotected_df <- ranked_pos_df |>
   filter(protected == 0)
 
+
+library(dplyr)
+
+top_residuals_by_pos <- ranked_pos_df |>
+  mutate(
+    residual_num = parse_number(gsub("[$,]", "", residual))  # remove $ and , before parsing
+  ) |>
+  group_by(pos_group) |>
+  slice_max(order_by = residual_num, n = 10) |>
+  arrange(pos_group, desc(residual_num)) |>
+  select(player, pos, pos_group, actual, xgb_pred, residual, age)
+
+top_residuals_by_pos
+
+
+# adding a differnt decay for age 
+draft_ranking <- read_csv("draft_ranking.csv")
+
+draft_ranking <- draft_ranking |>
+  mutate(
+    actual = parse_number(actual),
+    xgb_pred = parse_number(xgb_pred),
+    residual = xgb_pred - actual,
+    pos_group = case_when(
+      str_detect(pos, "G") ~ "G",
+      str_detect(pos, "F") ~ "F",
+      str_detect(pos, "C") ~ "C",
+      TRUE ~ "Other"
+    )
+  ) |>
+  #filter(residual > 0) |>
+  mutate(
+    across(c(actual, xgb_pred, residual), scales::dollar_format())
+  )
+
+  
 ```
 
 
