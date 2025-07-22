@@ -29,6 +29,15 @@ Describe the data you’re using in detail, where you accessed it, along with re
 
 ```{r}
 #| echo: false
+library(dplyr)
+library(janitor)
+library(lubridate)
+library(readr)
+library(stringr)
+library(stringi) 
+library(tidyverse)
+library(ggrepel)
+library(scales)
 
 # loading the data
 model_df <- read_csv("salary_model_df.csv")
@@ -38,6 +47,9 @@ eda_df <- read_csv("eda_df.csv")
 
 ### EDA
 ```{r}
+#| echo: false
+#| results: false
+
 # Define the nine star players to highlight
 star_players <- c(
   "caitlin clark", "arike ogunbowale", "a'ja wilson",
@@ -180,13 +192,38 @@ draft_ranking <- draft_ranking |>
       str_detect(pos, "C") ~ "C",
       TRUE ~ "Other"
     )
-  ) |>
-  #filter(residual > 0) |>
-  mutate(
-    across(c(actual, xgb_pred, residual), scales::dollar_format())
-  )
+  ) 
 
-  
+# Filter and summarize BEFORE formatting
+target_players <- draft_ranking |>
+  filter(residual > 0, protected == 0, 
+         ufa == 0) |>
+  group_by(pos_group) 
+
+target_guards <- target_players |>
+  filter(pos_group == "G") 
+
+
+# Format residuals for display
+summary_table |>
+  mutate(avg_residual = dollar(avg_residual))
+
+```
+
+```{r}
+summary_table |>
+  mutate(avg_residual = dollar(avg_residual))
+
+undervalued_players <- draft_ranking |>
+  filter(residual > 0, protected == 0) |>
+  mutate(
+    residual = dollar(residual),
+    actual = dollar(actual),
+    xgb_pred = dollar(xgb_pred)
+  ) |>
+  select(player, pos_group, residual, actual, xgb_pred) |>
+  arrange(desc(residual))
+
 ```
 
 
