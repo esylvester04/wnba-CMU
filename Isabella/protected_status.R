@@ -115,14 +115,16 @@ c_years <- c_years %>%
 
 
 
-players_weighted_final <- players_weighted_summarised %>%
+
+
+players_weighted_final_a <- players_weighted_summarised %>%
   right_join(c_years, by = "player")
 
 
 players_weighted_final_a <- players_weighted_final %>%
-  left_join(ages %>% select(player, age), by = "player")
+  right_join(ages %>% select(player, age), by = "player")
 
-players_weighted_final_a <- players_ranked_u %>%
+players_weighted_final_a <- players_weighted_final_a %>%
   mutate(
     age = case_when(
       player == "te paopao" ~ 22,
@@ -147,38 +149,15 @@ players_weighted_final_a <- players_ranked_u %>%
   )
 
 
-# players_ranked %>%
-#   select(team, player, weighted_mp, weighted_ws, per_minute_score, protected) %>%
-#   arrange(team, desc(per_minute_score))
-# 
-
-
-
-
-# players_ranked <- players_weighted_final %>%
-#   group_by(team) %>%
-#   mutate(
-#     per_minute_score = scale(weighted_mp) +
-#       0.2*scale(weighted_ws) +
-#       0.1*scale(weighted_per) +
-#       0.2 * scale(contract_y)
-#   ) %>%
-#   arrange(team, desc(per_minute_score)) %>%
-#   mutate(
-#     rank_within_team = row_number(),
-#     protected = if_else(rank_within_team <= 5, 1, 0)
-#   ) %>%
-#   ungroup()
-
 
 players_ranked_u <- players_weighted_final_a %>%
   group_by(team) %>%
   mutate(
+    age_penalty = if_else(age > 35, scale(age), 0),  # decay only for age > 33
     per_minute_score =
-      0.2*scale(weighted_ws) +
-      0.3*scale(weighted_per) +
+      0.3 * scale(weighted_per) +
       0.1 * scale(contract_y) -
-      0.2 * scale(age)
+      0.3 * age_penalty
   ) %>%
   arrange(team, desc(per_minute_score)) %>%
   mutate(
@@ -186,56 +165,57 @@ players_ranked_u <- players_weighted_final_a %>%
     protected = if_else(rank_within_team <= 5, 1, 0)
   ) %>%
   ungroup()
+
+
+
+p_salary <- read_csv("salary_model_df.csv")
+
+p_salary<- p_salary %>% 
+  mutate(player = stri_trans_general(player, "Latin-ASCII"),
+         player = str_trim(player),
+         player = str_to_lower(player),
+         player = str_replace_all(player, "-", " "),  # Replace hyphen with space
+         player = str_replace(player, "^([\\w']+)\\s+.*\\s+([\\w']+)$", "\\1 \\2"))
+
+
+
+
+
+testing <- players_ranked_u %>%
+  full_join(p_salary, by = "player")
+
+
+
+
+testing <- testing %>% select(player,weighted_mp,weighted_ws,weighted_per,
+                                          team.x, contract_y,age,per_minute_score,rank_within_team,
+                                          protected,pos, actual, xgb_pred, residual)
+
 
 library(shiny)
 library(ggplot2)
 library(dplyr)
 
-players_ranked_ua <- players_weighted_final_a %>%
-  group_by(team) %>%
-  mutate(
-    per_minute_score =
-      0.2*scale(weighted_ws) +
-      0.3*scale(weighted_per) +
-      0.1 * scale(contract_y) -
-      0.3 * scale(age)
-  ) %>%
-  arrange(team, desc(per_minute_score)) %>%
-  mutate(
-    rank_within_team = row_number(),
-    protected = if_else(rank_within_team <= 5, 1, 0)
-  ) %>%
-  ungroup()
+
+write.csv(draft_ranking, "draft_ranking.csv")
+
+draft_ranking <- read.csv("draft_ranking.csv")
 
 
-
-
-# Clean up your dataset (remove NA teams)
-players_ranked_u_clean <- players_ranked_u %>%
-  filter(!is.na(team))
-
-
-write.csv(players_ranked_u_clean, "player_protection.csv")
-
-players_ranked_u_clean <- read.csv("player_protection.csv")
-
-
-
+# UI
 ui <- fluidPage(
-  titlePanel("WNBA Expansion Draft - Predicted Protection Status"),
+  titlePanel("WNBA Expansion Draft Predicted Protection Status"),
   sidebarLayout(
     sidebarPanel(
       selectInput(
         inputId = "team_choice",
         label = "Select a Team:",
-        choices = sort(unique(players_ranked_u_clean$team)),
-        selected = sort(unique(players_ranked_u_clean$team))[1]
+        choices = sort(unique(draft_ranking$team.x)),
+        selected = sort(unique(draft_ranking$team.x))[1]
       )
     ),
     mainPanel(
-      plotOutput("protection_plot", height = "500px"),
-      br(),
-      tableOutput("protection_table")
+      uiOutput("protection_table")  # Dynamically generated UI for two tables
     )
   )
 )
@@ -245,130 +225,98 @@ server <- function(input, output) {
   
   # Reactive filtered data
   filtered_data <- reactive({
-    players_ranked_u_clean %>%
-      filter(team == input$team_choice)
+    draft_ranking %>%
+      filter(team.x == input$team_choice)
   })
   
-  # Render the plot
-  output$protection_plot <- renderPlot({
-    data <- filtered_data()
-    
-    min_rank <- min(data$rank_within_team, na.rm = TRUE)
-    max_rank <- max(data$rank_within_team, na.rm = TRUE)
-    
-    ggplot(data, aes(
-      x = reorder(player, rank_within_team),
-      y = rank_within_team
-    )) +
-      geom_point(
-        aes(color = factor(protected, levels = c(1, 0))),
-        size = 4
-      ) +
-      geom_text(
-        aes(label = rank_within_team),
-        vjust = -0.7,
-        color = "black"
-      ) +
-      scale_color_manual(
-        values = c("1" = "forestgreen", "0" = "firebrick"),
-        labels = c("Protected", "Unprotected"),
-        name = "Status"
-      ) +
-      scale_y_continuous(
-        breaks = seq(min_rank, max_rank, by = 1),
-        limits = c(min_rank, max_rank)
-      ) +
-      labs(
-        x = "Player",
-        y = "Protection Rank",
-        title = paste("Protection Status -", input$team_choice)
-      ) +
-      theme_minimal(base_size = 14) +
-      theme(axis.text.x = element_text(angle = 45, hjust = 1))
+  # Create two side-by-side tables
+  output$protection_table <- renderUI({
+    fluidRow(
+      column(
+        width = 6,
+        h4("✅ Protected Players"),
+        tableOutput("protected_table")
+      ),
+      column(
+        width = 6,
+        h4("❌ Unprotected Players"),
+        tableOutput("unprotected_table")
+      )
+    )
   })
   
-  # Render the table
-  output$protection_table <- renderTable({
+  output$protected_table <- renderTable({
     filtered_data() %>%
-      arrange(rank_within_team) %>%
-      select(player, rank_within_team, protected)
+      filter(protected == 1) %>%
+      select(player)
+  })
+  
+  output$unprotected_table <- renderTable({
+    filtered_data() %>%
+      filter(protected == 0) %>%
+      select(player)
   })
 }
 
 # Run the app
 shinyApp(ui = ui, server = server)
 
-# ui <- fluidPage(
-#   titlePanel("WNBA Expansion Draft - Protection Viewer"),
-#   sidebarLayout(
-#     sidebarPanel(
-#       selectInput(
-#         inputId = "team_choice",
-#         label = "Select a Team:",
-#         choices = sort(unique(players_ranked_u_clean$team)),
-#         selected = sort(unique(players_ranked_u_clean$team))[1]
-#       )
-#     ),
-#     mainPanel(
-#       plotOutput("protection_plot", height = "500px"),
-#       br(),
-#       tableOutput("protection_table")
-#     )
-#   )
-# )
-# 
+
+
+
+
+
+
+
+ui <- fluidPage(
+  titlePanel("WNBA Expansion Draft - Protection Viewer"),
+  sidebarLayout(
+    sidebarPanel(
+      selectInput(
+        inputId = "team_choice",
+        label = "Select a Team:",
+        choices = sort(unique(draft_ranking$team.x)),
+        selected = sort(unique(draft_ranking$team.x))[1]
+      )
+    ),
+    mainPanel(
+      plotOutput("protection_plot", height = "500px"), br(),
+      tableOutput("protection_table")
+    )
+  )
+)
+ 
 # # Server
-# server <- function(input, output) {
+server <- function(input, output) {
 #   
 #   # Reactive filtered data
-#   filtered_data <- reactive({
-#     players_ranked_u_clean %>%
-#       filter(team == input$team_choice)
-#   })
+  filtered_data <- reactive({
+    draft_ranking %>%
+      filter(team.x == input$team_choice)
+  })
 #   
 #   # Render the plot
-#   output$protection_plot <- renderPlot({
-#     ggplot(filtered_data(), aes(
-#       x = reorder(player, rank_within_team),
-#       y = rank_within_team
-#     )) +
-#       geom_point(
-#         aes(color = factor(protected, levels = c(1, 0))),
-#         size = 4
-#       ) +
-#       geom_text(
-#         aes(label = rank_within_team),
-#         vjust = -0.7,
-#         color = "black"
-#       ) +
-#       scale_color_manual(
-#         values = c("1" = "forestgreen", "0" = "firebrick"),
-#         labels = c("Protected", "Unprotected"),
-#         name = "Status"
-#       ) +
-#       scale_y_continuous(
-#         breaks = 1:13,
-#         limits = c(1, 13)
-#       ) +
-#       labs(
-#         x = "Player",
-#         y = "Rank",
-#         title = paste("Protection Status -", input$team_choice)
-#       ) +
-#       theme_minimal(base_size = 14) +
-#       theme(axis.text.x = element_text(angle = 45, hjust = 1))
-#   })
-#   
-#   # Render the table
-#   output$protection_table <- renderTable({
-#     filtered_data() %>%
-#       arrange(rank_within_team) %>%
-#       select(player, rank_within_team, protected)
-#   })
-# }
+  output$protection_table <- renderUI({
+    protected <- filtered_data() %>% filter(protected == 1) %>% select(player)
+    unprotected <- filtered_data() %>% filter(protected == 0) %>% select(player)
+    
+    fluidRow(
+      column(6, h4("Protected Players"), tableOutput("protected_table")),
+      column(6, h4("Unprotected Players"), tableOutput("unprotected_table"))
+    )
+  })
+  
+  output$protected_table <- renderTable({
+    filtered_data() %>% filter(protected == 1) %>% select(player)
+  })
+  
+  output$unprotected_table <- renderTable({
+    filtered_data() %>% filter(protected == 0) %>% select(player)
+  })
+  
 # 
 #     
-# shinyApp(ui = ui, server = server)
+shinyApp(ui = ui, server = server)
 # 
 # 
 # 
@@ -414,10 +362,75 @@ shinyApp(ui = ui, server = server)
 
 
 
+draft_ranking_u <- draft_ranking %>% filter(protected==0)
+
+centers <- draft_ranking_u %>% filter(pos_group== "C")
+
+forwars<- draft_ranking_u %>% filter(pos_group=="F")
+
+guards <- draft_ranking_u %>% filter(pos_group=="G")
+
+
+library(ggplot2)
+library(dplyr)
+
+
+library(shiny)
+library(dplyr)
+library(ggplot2)
+
+# UI
+ui <- fluidPage(
+  titlePanel("WNBA Expansion Draft - Protection Viewer"),
+  sidebarLayout(
+    sidebarPanel(
+      selectInput(
+        inputId = "team_choice",
+        label = "Select a Team:",
+        choices = sort(unique(draft_ranking$team.x)),
+        selected = sort(unique(draft_ranking$team.x))[1]
+      )
+    ),
+    mainPanel(
+      plotOutput("protection_plot", height = "600px")
+    )
+  )
+)
+
+# Server
+server <- function(input, output) {
+  
+  # Reactive filtered data
+  filtered_data <- reactive({
+    draft_ranking %>%
+      filter(team.x == input$team_choice)
+  })
+  
+  # Dot plot showing protection status
+  output$protection_plot <- renderPlot({
+    ggplot(filtered_data(), aes(
+      x = factor(protected, levels = c(1, 0), labels = c("Protected", "Unprotected")),
+      y = reorder(player, protected),
+      color = factor(protected)
+    )) +
+      geom_point(size = 4) +
+      scale_color_manual(
+        values = c("1" = "forestgreen", "0" = "firebrick"),
+        labels = c("Protected", "Unprotected"),
+        name = "Status"
+      ) +
+      labs(
+        title = paste("Protection Status -", input$team_choice),
+        x = "Status",
+        y = "Player"
+      ) +
+      theme_minimal(base_size = 14)
+  })
+}
+
+# Run the app
+shinyApp(ui = ui, server = server)
 
 
 
-
-
-
-
+##
