@@ -1,5 +1,5 @@
 ---
-title: "Research Report"
+title: "Report draft"
 author:
   - Author 1
   - Author 2
@@ -28,7 +28,11 @@ Describe the problem and why it is important.
 Describe the data you’re using in detail, where you accessed it, along with relevant exploratory data analysis (EDA). You should also include descriptions of any relevant data pre-processing steps (e.g., whether you consider specific observations, create any meaningful features, etc.---but don't mention minor steps like column type conversion, filtering out unnecessary rows)
 
 ```{r}
+# loading in the data
 #| echo: false
+#| echo: false
+#| warning: false
+#| results: false
 library(dplyr)
 library(janitor)
 library(lubridate)
@@ -46,9 +50,13 @@ eda_df <- read_csv("eda_df.csv")
 ```
 
 ### EDA
+# PER / Salary EDA plot 
 ```{r}
 #| echo: false
-#| results: false
+#| warning: false
+
+
+#### PER / Salary EDA scatterplot: 
 
 # Define the nine star players to highlight
 star_players <- c(
@@ -86,19 +94,19 @@ ggplot(eda_df, aes(x = per, y = salary_clean)) +
            fill = "red", alpha = 0.15) +
   # Base scatter
   geom_point(alpha = 0.7, size = 3, color = "#1f78b4") +
-  # geom_label_repel(
-  #   data = star_df,
-  #   aes(label = player),
-  #   size = 3.5,
-  #   box.padding = 0.3,
-  #   point.padding = 0.2,
-  #   segment.color = "gray50",
-  #   segment.size = 0.7,
-  #   min.segment.length = 0,
-  #   direction = "y", # prefer vertical adjustment to avoid overlap
-  #   alpha = 0.7
-  # ) +
-  # Lines at key salary thresholds
+  geom_label_repel(
+    data = star_df,
+    aes(label = player),
+    size = 3.5,
+    box.padding = 0.3,
+    point.padding = 0.2,
+    segment.color = "gray50",
+    segment.size = 0.7,
+    min.segment.length = 0,
+    direction = "y", # prefer vertical adjustment to avoid overlap
+    alpha = 0.7
+  ) +
+  #Lines at key salary thresholds
   geom_hline(yintercept = 66000,  linetype = "dashed", color = "red", alpha = 0.5) +
   geom_hline(yintercept = 78000,  linetype = "dashed", color = "red", alpha = 0.5) +
   geom_hline(yintercept = 214000, linetype = "dashed", color = "green") +
@@ -118,8 +126,13 @@ ggplot(eda_df, aes(x = per, y = salary_clean)) +
     plot.subtitle = element_text(size = 12, margin = margin(b = 10)),
     axis.title = element_text(face = "bold")
   )
+```
 
-model_df |> distinct(pos)
+
+
+```{r}
+#| echo: false
+#| results: false
 
 
 library(readr)  
