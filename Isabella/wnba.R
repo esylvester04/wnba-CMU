@@ -152,6 +152,8 @@ all_advanced <- bind_rows(single_or_no_trade, multi_rows_cleaned) %>%
   arrange(player, year)
 
 write.csv(all_advanced, "all_advanced.csv")
+
+
 # page <- read_html("https://www.basketball-reference.com/wnba/years/2022.html")
 # # Find all table elements
 # tables <- page %>% html_elements("table")
@@ -857,37 +859,6 @@ colnames(players_weighted_c)
 
 
 
-summary(players_weighted$years_left)
-
-
-players_ranked <- players_weighted %>%
-  group_by(team) %>%
-  mutate(
-    per_minute_score = scale(weighted_mp) + scale(weighted_ws) + 0.3 * scale(years_left)
-  ) %>%
-  arrange(team, desc(per_minute_score)) %>%
-  mutate(
-    rank_within_team = row_number(),
-    protected = if_else(rank_within_team <= 5, 1, 0)
-  ) %>%
-  ungroup()
-
-
-
-
-##########  Decision Tree ###
-# - can use this to determine what the seed will be for the expansion team
-# - can use this to see which predictors are most valuable when predicting a teams seed/success
-# - then using those predictors we can predict how teams are going to do in the 2025 season as of right now data
-# - can we maybe apply that to see how the new expansion team is going to do
-
-
-############ Random Forest Model #####
-#   - predict Salary, maybe can see what varibles are most important for predicting whos protected and who i snot protected
-
-## XGBoost Model #
-# to predict the probability that a player is oging to be protected
-# to predict a players performance in the next year, predicting their per/rating
 
 p_salary<- p_salary %>% 
   mutate(player = stri_trans_general(player, "Latin-ASCII"),
@@ -905,12 +876,12 @@ salary_model_df<- salary_model_df %>%
                          player = str_replace(player, "^([\\w']+)\\s+.*\\s+([\\w']+)$", "\\1 \\2"))
 
 
-player_ranked_salary <- players_ranked_u_clean %>%
+draft_ranking <- draft_ranking %>%
   full_join(salary_model_df, by = "player")
 
 
 
-player_ranked_salary <- player_ranked_salary %>% select(player,weighted_mp,weighted_ws,weighted_per,
+draft_ranking <- draft_ranking %>% select(player,weighted_mp,weighted_ws,weighted_per,
                                                         team.x, contract_y,age,per_minute_score,rank_within_team,
                                                         protected,pos, actual, xgb_pred, residual)
 
@@ -923,10 +894,12 @@ player_ranked_salary<- read_csv("players_ranked_salary.csv")
 p_salary <- p_salary %>% select(player,ufa,suspended)
 
 
-player_ranked_salary_ufa <- player_ranked_salary %>% left_join(
+draft_ranking <- draft_ranking %>% left_join(
   p_salary, by= "player"
 )
 
+draft_ranking <- draft_ranking %>%
+  filter(!is.na(team.x))
 
 
 unprotected_player_ranked_salary<- player_ranked_salary_ufa %>% filter(protected==0)
