@@ -1,5 +1,5 @@
 #WNBA CT
-wnba_salaries <- read_csv("~/Desktop/SURE RStudio/WNBA Salaries.csv")
+wnba_salaries <- read_csv("~/Downloads/WNBA Salaries 2.csv")
 install.packages("janitor")
 library(tidyverse)
 library(dplyr)
@@ -27,6 +27,7 @@ VB <- a_wnba_2024 |>
 Salary <- df |>
   filter(Year == "2025")
 
+<<<<<<< Updated upstream
 install.packages("writexl")
 
 library(writexl)
@@ -169,3 +170,143 @@ Forwards <- unprotected |>
 
 Centers <- unprotected |>
   filter(pos_group == "C")
+=======
+
+Salary |>
+  count(Protection.Status)
+
+
+Eclude_waived <- 
+  
+KLS <- a_wnba_2025 |>
+  filter(player == "Katie Lou Samuelson")
+
+Salary |>
+  filter(Protection.Status == "Pregnancy/Childbirth")
+
+  
+Guards <- salary_stat |>
+  filter(pos == "G" & pos == "G-F")
+
+salary_stat |>
+  count(pos == "G-F")
+
+
+graph_ss <- salary_stat |>
+  select(player,salary_clean)
+
+graph_ss |> 
+  ggplot(aes(x = salary_clean)) +
+  geom_histogram()
+
+
+library(readr)
+library(ggplot2)
+
+# Read your data
+df <- read_csv("salary_data.csv")
+
+library(g)
+# Plot
+ggplot(graph_ss, aes(x = salary_clean)) +
+  geom_histogram(
+    aes(y = after_stat(count / sum(count) * 100)),
+    bins = 30,
+    fill = "skyblue",
+    color = "steelblue",
+    alpha = 0.4,
+    boundary = 0
+  ) +
+  scale_y_continuous(labels = scales::percent_format(scale = 1)) +
+  scale_x_continuous(labels = scales::dollar_format()) +
+  labs(
+    title = "Distribution of Player Salary for 2025-26 Season",
+    x = "$",
+    y = "Percentage of players"
+  ) +
+  theme_minimal()
+
+
+library(dplyr)
+library(tidyr)
+library(tidyverse)
+GSV <- a_wnba_2024 |>
+  filter(player == "Tiffany Hayes" | "Stephanie Talbot" |"Kayla Thornton" |"Monique Billings" |
+                "Cecilia Zandalasini" |
+                "Temi Fagbenle" |
+                "Veronica Burton" |
+                "Carla Leite" |
+                "Kate Martin" |
+                "Janelle Salaün" |
+                "Julie Vanloo" |
+                "Laeticia Amihere" |
+                "Bree Hall" |
+                "Maria Conde" |
+                "Iliana Rupert" |
+                "Kyara Linskens" |
+                "Aerial Powers")
+
+GSV <- a_wnba_2024 |>
+  filter(player %in% c("Tiffany Hayes", 
+                       "Stephanie Talbot",
+                       "Kayla Thornton",
+                       "Monique Billings",
+                         "Cecilia Zandalasini",
+                         "Temi Fagbenle",
+                         "Veronica Burton",
+                         "Carla Leite",
+                         "Kate Martin",
+                         "Janelle Salaün",
+                         "Julie Vanloo",
+                         "Laeticia Amihere",
+                         "Bree Hall",
+                         "Maria Conde",
+                         "Iliana Rupert",
+                         "Kyara Linskens",
+                         "Aerial Powers"))
+
+GSV <- wnba_2024 |>
+  filter(player %in% c("Tiffany Hayes", 
+                       "Stephanie Talbot",
+                       "Kayla Thornton",
+                       "Monique Billings",
+                       "Cecilia Zandalasini",
+                       "Temi Fagbenle",
+                       "Veronica Burton",
+                       "Carla Leite",
+                       "Kate Martin",
+                       "Janelle Salaün",
+                       "Julie Vanloo",
+                       "Laeticia Amihere",
+                       "Bree Hall",
+                       "Maria Conde",
+                       "Iliana Rupert",
+                       "Kyara Linskens",
+                       "Aerial Powers"))
+library(dplyr)
+library(tidyverse)
+library(tidyr)
+Guards <- a_wnba_2025 |>
+  filter(pos %in% c("G",
+                    "G-F"))
+
+Fowards <- a_wnba_2025 |>
+  filter(pos %in% c("F",
+                    "F-G",
+                    "F-C"))
+
+Centers <- a_wnba_2025 |>
+  filter(pos %in% c("C",
+                    "C-F"))
+
+Centers |>
+  arrange()
+  
+  
+a_wnba_2025 |>
+  count(pos)
+                    
+                    
+                    
+                    
+>>>>>>> Stashed changes

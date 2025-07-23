@@ -77,7 +77,10 @@ draft_ranking <- read.csv("draft_ranking.csv")
 
 # UI
 ui <- fluidPage(
-  titlePanel("2026 WNBA Expansion Draft Predicted Protection Status"),
+  tagList(
+    titlePanel("2026 WNBA Expansion Draft Predicted Protection Status"),
+    tags$h5("Last update: July 2025", style = "margin-top: -10px; color: gray;")
+  ),
   sidebarLayout(
     sidebarPanel(
       selectInput(
