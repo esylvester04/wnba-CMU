@@ -21,7 +21,11 @@ runtime: shiny
 ## Introduction 
 
 Our main research question is: How can we use player performance and salary data to optimize an expansion draft strategy in the WNBA? The goal of this project is to develop a model that helps identify players who are likely to be protected or left unprotected by their current teams and to quantify salary inefficiencies by comparing the player performance to their current compensation. Ultimately, we aim to recommend players who would be strategic targets for an expansion team seeking to maximize talent while operating within salary cap constraints.
+
+
 In the WNBA, salary distributions are operated under the Collective Bargaining Agreement (CBA). Teams are required to manage their rosters under strict financial limits. For example, each team must stay under a salary cap, with salary distributions, at times, vary based on a player’s experience in the league. This creates a challenge: build the best possible roster within a reasonable budget. During an expansion draft, new teams are allowed to select one player from each team who is left unprotected by existing franchises. Each team can “protect” a certain number of players, while the rest become available to be drafted. Teams typically protect high-performing or high-potential players, leaving others exposed due to age, injury, performance, or strategic reasons.
+
+
 Our motivation for pursuing this project stems from being able to create a model that predicts the pool of unprotected players and evaluates their performance relative to their salaries. We are particularly focused on identifying which players are undervalued and are most likely to be left unprotected in the expansion draft. Identifying these players is essential for helping new franchises build competitive rosters without overspending. However, there are some factors that front offices take into account that may not be publicly available when evaluating available players such as risks or inside intel. Ultimately, we look to project what players will be available in the 2026 WNBA expansion draft
 
 
@@ -95,7 +99,7 @@ ggplot(eda_df, aes(x = per,
   geom_label_repel(
     data = star_df,
     aes(label = str_to_title(player)),
-    size = 3.5,
+    size = 3,
     box.padding = 0.3,
     point.padding = 0.2,
     segment.color = "gray50",
@@ -114,10 +118,10 @@ ggplot(eda_df, aes(x = per,
   annotate("text", x = 29, y = 72000,
            label = "Rookie Range", color = "red4",
            size = 3, hjust = 0) +
-  annotate("text", x = 1.5, y = 214000 + 3000,
+  annotate("text", x = 0, y = 216000 + 3000,
            label = "Max ($214K)", color = "darkgreen",
            size = 3, hjust = 0) +
-  annotate("text", x = 1.5, y = 250000 + 3000,
+  annotate("text", x = 0, y = 252000 + 3000,
            label = "Supermax ($249K)", color = "blue",
            size = 3, hjust = 0) +
 
