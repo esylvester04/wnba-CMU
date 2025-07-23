@@ -4,7 +4,7 @@ library(ggplot2)
 library(dplyr)
 library(stringi)
 
-draft_ranking <- read.csv("draft_ranking.csv")
+
 
 
 draft_ranking <- draft_ranking %>%
@@ -63,9 +63,9 @@ draft_ranking <- draft_ranking %>%
   )
 
 
+draft_ranking <- read.csv("draft_ranking.csv")
 
-
-
+write.csv(draft_ranking, "draft_ranking.csv", row.names = FALSE)
 
 
 library(shiny)
@@ -73,7 +73,7 @@ library(dplyr)
 library(stringr)
 
 
-
+draft_ranking <- read.csv("draft_ranking.csv")
 
 # UI
 ui <- fluidPage(
