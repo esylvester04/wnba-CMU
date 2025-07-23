@@ -51,6 +51,7 @@ eda_df <- read_csv("eda_df.csv")
 
 ### EDA
 # PER / Salary EDA plot 
+# need to add salary levels
 ```{r}
 #| echo: false
 #| warning: false
@@ -136,6 +137,58 @@ Describe the modeling techniques you chose, their assumptions, justifications fo
 ## Results
 
 Describe your results. This can include tables and plots showing your results, as well as text describing how your models worked and the appropriate interpretations of the relevant output. (Note: Don’t just write out the textbook interpretations of all model coefficients. Instead, interpret the output that is relevant for your question of interest that is framed in the introduction)
+
+## Results table
+```{r}
+#| echo: false
+#| warning: false
+salary_table <- model_df_scaled |>
+  filter(tolower(player) %in% selected_players) |>
+  mutate(
+    actual   = as.numeric(actual),
+    xgb_pred = as.numeric(xgb_pred),
+    residual = as.numeric(residual)
+  ) |>
+  left_join(age_lookup, by = "player") |>
+  arrange(desc(residual)) |>
+  mutate(
+    Name = case_when(
+      player == "kayla mcbride" ~ "Kayla McBride",
+      TRUE ~ str_to_title(player)
+    ),
+    `Actual Salary`    = dollar(actual),
+    `Predicted Salary` = dollar(xgb_pred),
+    Residual           = dollar(residual)
+  ) |>
+  select(
+    Name,
+    Age,
+    Position = pos,
+    Team = team,
+    `Actual Salary`,
+    `Predicted Salary`,
+    Residual
+  ) |>
+  gt() |>
+  tab_header(
+    title = md("**Top Expansion Draft Prospects**")
+  ) |>
+  tab_style(
+    style = cell_text(weight = "bold", size = px(18)),
+    locations = cells_title(groups = "title")
+  ) |>
+  cols_align(
+    align = "left",
+    columns = everything()
+  ) |>
+  tab_options(
+    table.font.size = 14,
+    heading.align = "center"
+  )
+
+salary_table
+```
+
 
 ## Discussion
 

@@ -270,49 +270,49 @@ age_lookup <- tibble(
 
 selected_players <- age_lookup$player
 
-salary_table <- model_df_scaled |>
-  filter(tolower(player) %in% selected_players) |>
-  mutate(
-    actual   = as.numeric(actual),
-    xgb_pred = as.numeric(xgb_pred),
-    residual = as.numeric(residual),
-    Name     = str_to_title(player)
-  ) |>
-  left_join(age_lookup, by = "player") |>
-  arrange(desc(residual)) |>  # sort BEFORE formatting residual
-  mutate(
-  actual   = as.numeric(actual),
-  xgb_pred = as.numeric(xgb_pred),
-  residual = as.numeric(residual),
-  Name     = if_else(player == "kayla mcbride", "Kayla McBride", str_to_title(player))
-)
-
-  select(
-    Name,
-    Age,
-    Position = pos,
-    Team = team,
-    `Actual Salary`,
-    `Predicted Salary`,
-    Residual
-  ) |>
-  Name = if_else(player == "kayla mcbride", "Kayla McBride", str_to_title(player)) |>
-gt() |>
-tab_header(
-  title = md("**Top Expansion Draft Prospects**")
-) |>
-tab_style(
-  style = cell_text(weight = "bold", size = px(18)),
-  locations = cells_title(groups = "title")
-) |>
-  cols_align(
-    align = "left",
-    columns = everything()
-  ) |>
-  tab_options(
-    table.font.size = 14,
-    heading.align = "center"
-  )
+# salary_table <- model_df_scaled |>
+#   filter(tolower(player) %in% selected_players) |>
+#   mutate(
+#     actual   = as.numeric(actual),
+#     xgb_pred = as.numeric(xgb_pred),
+#     residual = as.numeric(residual),
+#     Name     = str_to_title(player)
+#   ) |>
+#   left_join(age_lookup, by = "player") |>
+#   arrange(desc(residual)) |>  # sort BEFORE formatting residual
+#   mutate(
+#   actual   = as.numeric(actual),
+#   xgb_pred = as.numeric(xgb_pred),
+#   residual = as.numeric(residual),
+#   Name     = if_else(player == "kayla mcbride", "Kayla McBride", str_to_title(player))
+# )
+# 
+#   select(
+#     Name,
+#     Age,
+#     Position = pos,
+#     Team = team,
+#     `Actual Salary`,
+#     `Predicted Salary`,
+#     Residual
+#   ) |>
+#   Name = if_else(player == "kayla mcbride", "Kayla McBride", str_to_title(player)) |>
+# gt() |>
+# tab_header(
+#   title = md("**Top Expansion Draft Prospects**")
+# ) |>
+# tab_style(
+#   style = cell_text(weight = "bold", size = px(18)),
+#   locations = cells_title(groups = "title")
+# ) |>
+#   cols_align(
+#     align = "left",
+#     columns = everything()
+#   ) |>
+#   tab_options(
+#     table.font.size = 14,
+#     heading.align = "center"
+#   )
   
   
   
