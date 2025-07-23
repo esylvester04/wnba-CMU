@@ -15,11 +15,15 @@ execute:
   echo: false
   warning: false
   message: false
+runtime: shiny
 ---
 
 ## Introduction 
 
-Describe the problem and why it is important.
+Our main research question is: How can we use player performance and salary data to optimize an expansion draft strategy in the WNBA? The goal of this project is to develop a model that helps identify players who are likely to be protected or left unprotected by their current teams and to quantify salary inefficiencies by comparing the player performance to their current compensation. Ultimately, we aim to recommend players who would be strategic targets for an expansion team seeking to maximize talent while operating within salary cap constraints.
+In the WNBA, salary distributions are operated under the Collective Bargaining Agreement (CBA). Teams are required to manage their rosters under strict financial limits. For example, each team must stay under a salary cap, with salary distributions, at times, vary based on a player’s experience in the league. This creates a challenge: build the best possible roster within a reasonable budget. During an expansion draft, new teams are allowed to select one player from each team who is left unprotected by existing franchises. Each team can “protect” a certain number of players, while the rest become available to be drafted. Teams typically protect high-performing or high-potential players, leaving others exposed due to age, injury, performance, or strategic reasons.
+Our motivation for pursuing this project stems from being able to create a model that predicts the pool of unprotected players and evaluates their performance relative to their salaries. We are particularly focused on identifying which players are undervalued and are most likely to be left unprotected in the expansion draft. Identifying these players is essential for helping new franchises build competitive rosters without overspending. However, there are some factors that front offices take into account that may not be publicly available when evaluating available players such as risks or inside intel. Ultimately, we look to project what players will be available in the 2026 WNBA expansion draft
+
 
 ## Data
 
@@ -28,11 +32,9 @@ Describe the data you’re using in detail, where you accessed it, along with re
 ### EDA
 
 ```{r}
-# loading in the data
-#| echo: false
 #| echo: false
 #| warning: false
-#| results: false
+#| results: 'hide'
 library(dplyr)
 library(janitor)
 library(lubridate)
@@ -109,8 +111,8 @@ ggplot(eda_df, aes(x = per,
   geom_hline(yintercept = 250000, linetype = "dashed", color = "blue") +
 
   # text labels
-  annotate("text", x = 30, y = 72000,
-           label = "Rookie Range ($66K–$78K)", color = "red4",
+  annotate("text", x = 29, y = 72000,
+           label = "Rookie Range", color = "red4",
            size = 3, hjust = 0) +
   annotate("text", x = 1.5, y = 214000 + 3000,
            label = "Max ($214K)", color = "darkgreen",
@@ -120,7 +122,7 @@ ggplot(eda_df, aes(x = per,
            size = 3, hjust = 0) +
 
   labs(
-    title = "Identifying Who May Be Outperforming Their Salary",
+    title = "Identifying who may be outperforming their salary",
     x = "Player Efficiency Rating (PER)",
     y = "Salary (USD)"
   ) +
@@ -128,11 +130,13 @@ ggplot(eda_df, aes(x = per,
                      breaks = seq(0, 300000, by = 40000)) +
   scale_x_continuous(breaks = seq(0, max(eda_df$per), by = 5),
                      limits = c(0, max(eda_df$per) + 5)) +
+  #coord_cartesian(clip = "off") +
   theme_classic(base_size = 14) +
   theme(
-    plot.title = element_text(face = "bold", size = 18),
-    plot.subtitle = element_text(size = 12, margin = margin(b = 10)),
-    axis.title = element_text(face = "bold")
+    plot.title = element_text(size = 18),
+    plot.subtitle = element_text(size = 12, margin = margin(b = 15)),
+    axis.title = element_text(),
+    plot.margin = margin(t = 15, r = 15, b = 15, l = 25),  # left margin increased
   )
 ```
 
@@ -145,10 +149,94 @@ Describe the modeling techniques you chose, their assumptions, justifications fo
 
 Describe your results. This can include tables and plots showing your results, as well as text describing how your models worked and the appropriate interpretations of the relevant output. (Note: Don’t just write out the textbook interpretations of all model coefficients. Instead, interpret the output that is relevant for your question of interest that is framed in the introduction)
 
-::: {.panel-tabset}
-# Model Comparisons 
 
+```{r, context="shiny"}
+#| echo: false
+#| warning: false
+ 
+library(shiny)
+
+draft_ranking <- read.csv("draft_ranking.csv")
+
+ui <- fluidPage(
+  tagList(
+    tags$h3(
+      "2026 WNBA Expansion Draft Predicted Protection Status",
+      style = "margin-bottom: 5px; font-weight: bold;"
+    ),
+    tags$h5(
+      "Last update: July 2025",
+      style = "margin-top: 0; color: gray;"
+    )
+  ),
+  sidebarLayout(
+    sidebarPanel(
+      selectInput(
+        inputId = "team_choice",
+        label = "Select a Team:",
+        choices = sort(unique(draft_ranking$team.x)),
+        selected = sort(unique(draft_ranking$team.x))[1]
+      )
+    ),
+    mainPanel(
+      uiOutput("protection_table")
+    )
+  )
+)
+
+
+# Server
+server <- function(input, output) {
+  
+  # Reactive filtered and cleaned data
+  filtered_data <- reactive({
+    draft_ranking %>%
+      filter(team.x == input$team_choice) %>%
+      mutate(
+        player = str_to_title(player)  # Capitalize player names
+      )
+  })
+  
+  # Render two side-by-side tables
+  output$protection_table <- renderUI({
+    fluidRow(
+      column(
+        width = 6,
+        h4("✅  Likely Protected Players"),
+        tableOutput("protected_table")
+      ),
+      column(
+        width = 6,
+        h4("❌ Unprotected Players"),
+        tableOutput("unprotected_table")
+      )
+    )
+  })
+  
+  output$protected_table <- renderTable({
+    filtered_data() %>%
+      filter(protected == 1) %>%
+      mutate(age = as.integer(age)) %>%
+      select(Player = player, Position = pos, Age = age)
+  })
+  
+  output$unprotected_table <- renderTable({
+    filtered_data() %>%
+      filter(protected == 0) %>%
+      mutate(age = as.integer(age)) %>%
+      select(Player = player, Position = pos, Age = age)
+  })
+  
+}
+
+# Run the app
+shinyApp(ui = ui, server = server)
+```
+
+
+::: {.panel-tabset}
 ## Results table
+
 ```{r}
 #| echo: false
 #| warning: false
@@ -218,90 +306,10 @@ salary_table <- model_df_scaled |>
 salary_table
 ```
 
+
 :::
 
 ## Discussion
-
-
-
-```{r}
-#| echo: false
-#| warning: false
- 
-library(shiny)
-
-draft_ranking <- read.csv("draft_ranking.csv")
-
-# UI
-ui <- fluidPage(
-  titlePanel("2026 WNBA Expansion Draft Predicted Protection Status"),
-  sidebarLayout(
-    sidebarPanel(
-      selectInput(
-        inputId = "team_choice",
-        label = "Select a Team:",
-        choices = sort(unique(draft_ranking$team.x)),
-        selected = sort(unique(draft_ranking$team.x))[1]
-      )
-    ),
-    mainPanel(
-      uiOutput("protection_table")
-    )
-  )
-)
-
-# Server
-server <- function(input, output) {
-  
-  # Reactive filtered and cleaned data
-  filtered_data <- reactive({
-    draft_ranking %>%
-      filter(team.x == input$team_choice) %>%
-      mutate(
-        player = str_to_title(player)  # Capitalize player names
-      )
-  })
-  
-  # Render two side-by-side tables
-  output$protection_table <- renderUI({
-    fluidRow(
-      column(
-        width = 6,
-        h4("✅ Protected Players"),
-        tableOutput("protected_table")
-      ),
-      column(
-        width = 6,
-        h4("❌ Unprotected Players"),
-        tableOutput("unprotected_table")
-      )
-    )
-  })
-  
-  output$protected_table <- renderTable({
-    filtered_data() %>%
-      filter(protected == 1) %>%
-      mutate(age = as.integer(age)) %>%
-      select(Player = player, Position = pos, Age = age)
-  })
-  
-  output$unprotected_table <- renderTable({
-    filtered_data() %>%
-      filter(protected == 0) %>%
-      mutate(age = as.integer(age)) %>%
-      select(Player = player, Position = pos, Age = age)
-  })
-  
-}
-
-# Run the app
-shinyApp(ui = ui, server = server)
-```
-
-
-
-
-
 
 
 
@@ -311,35 +319,23 @@ Give your conclusions and summarize what you have learned with regards to your q
 
 
 
-
-
-
-
 ## Appendix: A quick tutorial
 
-**(Feel free to remove this section when you submit)**
 
-
-* Each item starts on a new line with an asterisk.
-* Items should start on the beginning of the line.
-* Leave blank lines after the end of the list so the list does not continue.
-
-
-
-### Figures
-
-If a code block produces a plot or figure, this figure will automatically be inserted inline in the report. That is, it will be inserted exactly where the code block is.
 
 ```{r}
+#| echo: false
+#| warning: false
+#| results: 'hide'
 #| fig-width: 5
 #| fig-height: 3.5
 #| fig-cap: "This is a caption. It should explain what's in the figure and what's interesting about it. For instance: There is a negative, strong linear correlation between miles per gallon and horsepower for US cars in the 1970s."
 
-library(tidyverse)
-mtcars |> 
-  ggplot(aes(x = mpg, y = hp)) +
-  geom_point() +
-  labs(x = "Miles per gallon",
-       y = "Horsepower")
+# library(tidyverse)
+# mtcars |> 
+#   ggplot(aes(x = mpg, y = hp)) +
+#   geom_point() +
+#   labs(x = "Miles per gallon",
+#        y = "Horsepower")
 ```
 
