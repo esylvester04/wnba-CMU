@@ -86,32 +86,32 @@ ggplot(eda_df, aes(x = per, y = salary_clean)) +
            fill = "red", alpha = 0.15) +
   # Base scatter
   geom_point(alpha = 0.7, size = 3, color = "#1f78b4") +
-  geom_label_repel(
-    data = star_df,
-    aes(label = player),
-    size = 3.5,
-    box.padding = 0.3,
-    point.padding = 0.2,
-    segment.color = "gray50",
-    segment.size = 0.7,
-    min.segment.length = 0,
-    direction = "y", # prefer vertical adjustment to avoid overlap
-    alpha = 0.7
-  ) +
+  # geom_label_repel(
+  #   data = star_df,
+  #   aes(label = player),
+  #   size = 3.5,
+  #   box.padding = 0.3,
+  #   point.padding = 0.2,
+  #   segment.color = "gray50",
+  #   segment.size = 0.7,
+  #   min.segment.length = 0,
+  #   direction = "y", # prefer vertical adjustment to avoid overlap
+  #   alpha = 0.7
+  # ) +
   # Lines at key salary thresholds
   geom_hline(yintercept = 66000,  linetype = "dashed", color = "red", alpha = 0.5) +
   geom_hline(yintercept = 78000,  linetype = "dashed", color = "red", alpha = 0.5) +
   geom_hline(yintercept = 214000, linetype = "dashed", color = "green") +
   geom_hline(yintercept = 250000, linetype = "dashed", color = "blue") +
   labs(
-    title = "Player Efficiency vs WNBA Salary 2025",
+    title = "Identifying Who May be Outpreforming Their Salary",
     x = "Player Efficiency Rating (PER)",
     y = "Salary (USD)",
   ) +
   scale_y_continuous(labels = dollar_format(),
                      breaks = seq(0, 300000, by = 40000)) +
-  scale_x_continuous(breaks = seq(0, max(eda_df$per) + 5, by = 5),
-                     limits = c(0, max(eda_df$per) + 10)) +
+  scale_x_continuous(breaks = seq(0, max(eda_df$per), by = 5),
+                     limits = c(0, max(eda_df$per) + 5 )) +
   theme_classic(base_size = 14) +
   theme(
     plot.title = element_text(face = "bold", size = 18),
@@ -203,16 +203,18 @@ target_players <- draft_ranking |>
 target_guards <- target_players |>
   filter(pos_group == "G") 
 
+target_forwards <- target_players |>
+  filter(pos_group == "F") 
 
 # Format residuals for display
-summary_table |>
-  mutate(avg_residual = dollar(avg_residual))
+# summary_table |>
+#   mutate(avg_residual = dollar(avg_residual))
 
 ```
 
 ```{r}
-summary_table |>
-  mutate(avg_residual = dollar(avg_residual))
+# summary_table |>
+#   mutate(avg_residual = dollar(avg_residual))
 
 undervalued_players <- draft_ranking |>
   filter(residual > 0, protected == 0) |>
@@ -224,8 +226,132 @@ undervalued_players <- draft_ranking |>
   select(player, pos_group, residual, actual, xgb_pred) |>
   arrange(desc(residual))
 
+
 ```
 
+
+# Making a results table
+```{r}
+library(dplyr)
+library(gt)
+library(scales)
+
+
+selected_players <- c(
+  "sug sutton", "maya caldwell", "julie vanloo", "marquesha davis",
+  "kayla mcbride", "nyara sabally", "olivia nelson-ododa", "li yueru",
+  "makayla timpson", "naz hillmon", "janelle salaun"
+)
+
+age_lookup <- tibble(
+  player = c(
+    "sug sutton", "maya caldwell", "julie vanloo", "kayla mcbride",
+    "naz hillmon", "li yueru", "marquesha davis", "makayla timpson",
+    "janelle salaun", "nyara sabally", "olivia nelson-ododa"
+  ),
+  Age = c(26, 26, 32, 33, 25, 26, 24, 22, 23, 25, 24)
+)
+
+
+
+
+selected_players <- age_lookup$player
+
+salary_table <- model_df_scaled |>
+  filter(tolower(player) %in% selected_players) |>
+  mutate(
+    actual   = as.numeric(actual),
+    xgb_pred = as.numeric(xgb_pred),
+    residual = as.numeric(residual),
+    Name     = str_to_title(player)
+  ) |>
+  left_join(age_lookup, by = "player") |>
+  arrange(desc(residual)) |>  # sort BEFORE formatting residual
+  mutate(
+  actual   = as.numeric(actual),
+  xgb_pred = as.numeric(xgb_pred),
+  residual = as.numeric(residual),
+  Name     = if_else(player == "kayla mcbride", "Kayla McBride", str_to_title(player))
+)
+
+  select(
+    Name,
+    Age,
+    Position = pos,
+    Team = team,
+    `Actual Salary`,
+    `Predicted Salary`,
+    Residual
+  ) |>
+  Name = if_else(player == "kayla mcbride", "Kayla McBride", str_to_title(player)) |>
+gt() |>
+tab_header(
+  title = md("**Top Expansion Draft Prospects**")
+) |>
+tab_style(
+  style = cell_text(weight = "bold", size = px(18)),
+  locations = cells_title(groups = "title")
+) |>
+  cols_align(
+    align = "left",
+    columns = everything()
+  ) |>
+  tab_options(
+    table.font.size = 14,
+    heading.align = "center"
+  )
+  
+  
+  
+salary_table <- model_df_scaled |>
+  filter(tolower(player) %in% selected_players) |>
+  mutate(
+    actual   = as.numeric(actual),
+    xgb_pred = as.numeric(xgb_pred),
+    residual = as.numeric(residual)
+  ) |>
+  left_join(age_lookup, by = "player") |>
+  arrange(desc(residual)) |>
+  mutate(
+    Name = case_when(
+      player == "kayla mcbride" ~ "Kayla McBride",
+      TRUE ~ str_to_title(player)
+    ),
+    `Actual Salary`    = dollar(actual),
+    `Predicted Salary` = dollar(xgb_pred),
+    Residual           = dollar(residual)
+  ) |>
+  select(
+    Name,
+    Age,
+    Position = pos,
+    Team = team,
+    `Actual Salary`,
+    `Predicted Salary`,
+    Residual
+  ) |>
+  gt() |>
+  tab_header(
+    title = md("**Top Expansion Draft Prospects**")
+  ) |>
+  tab_style(
+    style = cell_text(weight = "bold", size = px(18)),
+    locations = cells_title(groups = "title")
+  ) |>
+  cols_align(
+    align = "left",
+    columns = everything()
+  ) |>
+  tab_options(
+    table.font.size = 14,
+    heading.align = "center"
+  )
+
+salary_table
+
+
+
+```
 
 
 ## Methods
@@ -244,31 +370,14 @@ Give your conclusions and summarize what you have learned with regards to your q
 
 
 
-### Figures
-
-If a code block produces a plot or figure, this figure will automatically be inserted inline in the report. That is, it will be inserted exactly where the code block is.
 
 ```{r}
-#| fig-width: 5
-#| fig-height: 3.5
-#| fig-cap: "This is a caption. It should explain what's in the figure and what's interesting about it. For instance: There is a negative, strong linear correlation between miles per gallon and horsepower for US cars in the 1970s."
 
-library(tidyverse)
-mtcars |> 
-  ggplot(aes(x = mpg, y = hp)) +
-  geom_point() +
-  labs(x = "Miles per gallon",
-       y = "Horsepower")
-```
-
-Notice the use of `fig-width` and `fig-height` to control the figure's size (in inches). 
-These control the sizes given to `R` when it generates the plot, so `R` proportionally adjusts the font sizes to be large enough.
-
-
-
-
-
-```{r}
+selected_players <- c(
+  "sug sutton", "maya caldwell", "julie vanloo", "marquesha davis",
+  "kayla mcbride", "nyara sabally", "olivia nelson-ododa", "li yueru",
+  "makayla timpson", "naz hillmon", "janelle salaun"
+)
 
 ggplot(data = model_df_scaled, 
        aes(x = actual, y = xgb_pred, color = residual)) +
@@ -295,5 +404,68 @@ ggplot(data = model_df_scaled,
     axis.title = element_text(),
     legend.title = element_text()
   )
+
+
+
+# Add individual nudges for each player label
+top_overvalued_players <- top_overvalued_players %>%
+  mutate(
+    nudge_x = case_when(
+      player == "makayla timpson" ~ -50000,
+      player == "naz hillmon"     ~ -20000,
+      player == "nyara sabally"   ~ 60000,
+      player == "sug sutton"      ~ 0,
+      player == "maya caldwell"   ~ -30000,
+      player == "marquesha davis" ~ -50000,
+      player == "janelle salaun" ~ -50000,
+      TRUE ~ 0
+    ),
+    nudge_y = case_when(
+      player == "makayla timpson" ~ -8000,
+      player == "naz hillmon"     ~ -10000,
+      player == "nyara sabally"   ~ 0,  # move way down
+      player == "sug sutton"      ~ 40000,
+      player == "maya caldwell"   ~ -20000,
+      player == "marquesha davis" ~ 40000,
+      player == "janelle salaun" ~ 20000,
+      TRUE ~ 0
+    )
+  )
+
+ggplot(data = model_df_scaled, 
+       aes(x = actual, y = xgb_pred, color = residual)) +
+  geom_point(alpha = 0.7, size = 2) +
+  geom_abline(slope = 1, intercept = 0, 
+              linetype = "dashed", color = "gray40") +
+  scale_x_continuous(labels = dollar_format(prefix = "$")) +
+  scale_y_continuous(labels = dollar_format(prefix = "$")) +
+  scale_color_gradient2(
+    low = "firebrick", mid = "gray80", high = "forestgreen", midpoint = 0
+  ) +
+  labs(
+    title = "Predicted vs. Actual WNBA 2025 Salaries",
+    x = "Actual 2025 Salary",
+    y = "Predicted 2025 Salary"
+  ) +
+  theme_classic(base_size = 15) +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = "bold"),
+    axis.title = element_text(),
+    legend.title = element_text()
+  ) +
+  # Add connecting lines
+  geom_segment(data = top_overvalued_players,
+               aes(x = actual, y = xgb_pred, 
+                   xend = actual + nudge_x, yend = xgb_pred + nudge_y), 
+               color = "grey", size = 1) +
+  # Add labels
+  geom_label(data = top_overvalued_players,
+             aes(x = actual + nudge_x, y = xgb_pred + nudge_y, label = str_to_title(player)),
+             color = "black", size = 4, label.padding = unit(0.3, "lines"))
+
+
+
+
+
 ```
 

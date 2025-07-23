@@ -929,6 +929,37 @@ cv_summary |>
   ) +
   theme_minimal()
 
+#making it prettier: 
+library(ggtext)
+library(ggtext)  # Make sure this is loaded
+
+cv_summary |>
+  mutate(model = factor(model, levels = model_order)) |>
+  ggplot(aes(x = model, y = rmse)) +
+  geom_point(size = 4, alpha = 0.7, color = "steelblue") +
+  stat_summary(fun = mean, geom = "point", color = "firebrick", size = 5, shape = 18) +
+  stat_summary(fun.data = mean_se, geom = "errorbar", color = "firebrick", width = 0.2) +
+  scale_x_discrete(labels = c(
+    lm_pred = "**Linear Model**",
+    poly_pred = "**Polynomial (Age²)**",
+    lasso_pred = "**LASSO**",
+    ridge_pred = "**Ridge**",
+    xgb_pred = "**XGBoost**"
+  )) +
+  labs(
+    title = "**Model Comparison: 5-Fold Cross-Validation RMSE**",
+    x = "Model Type",
+    y = "RMSE (Predicted Salary)"
+  ) +
+  theme_minimal(base_size = 13) +
+  theme(
+    plot.title = element_markdown(hjust = 0.5, size = 16),
+    axis.title.x = element_text(face = "bold"),
+    axis.title.y = element_text(face = "bold"),
+    axis.text.x = element_markdown()
+  )
+
+
 
 library(ggplot2)
 library(dplyr)
@@ -1019,6 +1050,40 @@ ggplot(xgb_preds, aes(x = actual, y = xgb_pred, color = residual)) +
     axis.title = element_text(),
     legend.title = element_text()
   )
+
+
+
+
+#improving aesthetics: 
+
+library(scales)
+library(ggplot2)
+
+ggplot(xgb_preds, aes(x = actual, y = xgb_pred, color = residual)) +
+  geom_point(alpha = 0.75, size = 3) +
+  geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "gray50", linewidth = 1) +
+  scale_x_continuous(labels = dollar_format(prefix = "$"), name = "Actual 2025 Salary") +
+  scale_y_continuous(labels = dollar_format(prefix = "$"), name = "Predicted 2025 Salary") +
+  scale_color_gradient2(
+    low = "firebrick",      # overpaid
+    mid = "gray80",         # fair
+    high = "forestgreen",   # underpaid
+    midpoint = 0,
+    name = "Residual",
+    labels = dollar_format(prefix = "$")
+  ) +
+  labs(
+    title = "**Predicted vs. Actual 2025 WNBA Salaries**"
+  ) +
+  theme_classic(base_size = 14) +
+  theme(
+    plot.title = element_markdown(hjust = 0.5, size = 16),
+    plot.subtitle = element_text(hjust = 0.5, face = "italic", size = 12),
+    plot.caption = element_text(hjust = 0, size = 10),
+    axis.title = element_text(face = "bold"),
+    legend.title = element_text(face = "bold")
+  )
+
 
 
 #thinking about how to rank top players 

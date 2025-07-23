@@ -854,6 +854,33 @@ ggplot(salary_stat, aes(x = per, y = salary_clean)) +
 
 
 
+ggplot(salary_stat, aes(x = per, y = salary_clean)) +
+  # Highlight rookie salary range
+  annotate("rect",
+           xmin = -Inf, xmax = Inf,
+           ymin = 66000, ymax = 78000,
+           fill = "red", alpha = 0.15) +
+  # Base scatter
+  geom_point(alpha = 0.7, size = 3, color = "#1f78b4") +
+  geom_hline(yintercept = 66000,  linetype = "dashed", color = "red", alpha = 0.5) +
+  geom_hline(yintercept = 78000,  linetype = "dashed", color = "red", alpha = 0.5) +
+  geom_hline(yintercept = 214000, linetype = "dashed", color = "green") +
+  geom_hline(yintercept = 250000, linetype = "dashed", color = "blue") +
+  labs(
+    title = "Player Efficiency Rating vs WNBA Salary 2025",
+    x = "Player Efficiency Rating (PER)",
+    y = "Salary (USD)",
+  ) +
+  scale_y_continuous(labels = dollar_format(),
+                     breaks = seq(0, 300000, by = 40000)) +
+  scale_x_continuous(breaks = seq(0, max(salary_stat$per) + 5, by = 5),
+                     limits = c(0, max(salary_stat$per) + 10)) +
+  theme_classic(base_size = 14) +
+  theme(
+    plot.title = element_text(face = "bold", size = 18),
+    plot.subtitle = element_text(size = 12, margin = margin(b = 10)),
+    axis.title = element_text(face = "bold")
+  )
 
 
 ggplot(salary_stat, aes(x = per, y = salary_clean)) +
@@ -901,7 +928,7 @@ p <- ggplot(salary_stat, aes(x = per, y = salary_clean, text = player)) +
   geom_point(alpha = 0.7, size = 3, color = "#1f78b4") +
   geom_point(data = underpaid, color = "#1f78b4", size = 3) +
   geom_point(data = top_paid, color = "#1f78b4", size = 3) +
-  geom_point(data = star_players_df, color = "#1f78b4", size = 3) +
+  geom_point(data = star_players, color = "#1f78b4", size = 3) +
   
   # Static salary range labels at left side or just inside plot, to avoid pushing plot width
   annotate("text", x = 28, y = 73000, label = "Rookie Range\n($66k–$78k)",
