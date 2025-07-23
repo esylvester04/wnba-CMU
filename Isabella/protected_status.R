@@ -154,7 +154,7 @@ players_ranked_u <- players_weighted_final_a %>%
   group_by(team) %>%
   mutate(
     age_penalty = if_else(age > 35, scale(age), 0),  # decay only for age > 33
-    per_minute_score =
+    per_minute_score = 0.2 * scale(weighted_ws)
       0.3 * scale(weighted_per) +
       0.1 * scale(contract_y) -
       0.3 * age_penalty
@@ -181,6 +181,9 @@ p_salary<- p_salary %>%
 
 
 
+
+
+
 testing <- players_ranked_u %>%
   full_join(p_salary, by = "player")
 
@@ -200,6 +203,8 @@ library(dplyr)
 write.csv(draft_ranking, "draft_ranking.csv")
 
 draft_ranking <- read.csv("draft_ranking.csv")
+
+colnames(draft_ranking)
 
 
 # UI
@@ -434,3 +439,127 @@ shinyApp(ui = ui, server = server)
 
 
 ##
+
+
+
+library(dplyr)
+
+# Create weight grid including age penalty
+weights <- expand.grid(
+  w_ws = seq(0.1, 0.9, by = 0.2),
+  w_per = seq(0.1, 0.9, by = 0.2),
+  w_contract = seq(0.1, 0.9, by = 0.2),
+  w_age = seq(-0.5, 0, by = 0.1)  # Age penalty weight
+) %>%
+  filter(abs(w_ws + w_per + w_contract - 1) < 1e-6)  # Only apply sum=1 to the main 3 weights
+
+# Store results
+results <- list()
+
+for (i in 1:nrow(weights)) {
+  w <- weights[i, ]
+  
+  df <- draft_ranking %>%
+    group_by(team.x) %>%
+    mutate(
+      age_penalty = if_else(age > 35, as.numeric(scale(age)), 0),
+      test_score =
+        w$w_ws * as.numeric(scale(weighted_ws)) +
+        w$w_per * as.numeric(scale(weighted_per)) +
+        w$w_contract * as.numeric(scale(contract_y)) +
+        w$w_age * age_penalty,
+      test_rank = rank(-test_score, ties.method = "first"),
+      test_protected = if_else(test_rank <= 5, 1, 0)
+    ) %>%
+    ungroup()
+  
+  # Compare to original protection
+  accuracy <- mean(df$test_protected == df$protected, na.rm = TRUE)
+  
+  results[[i]] <- c(w, accuracy = accuracy)
+}
+
+# Combine and sort results
+results_df <- do.call(rbind, results) %>% as.data.frame()
+results_df <- results_df %>% arrange(desc(accuracy))
+
+# View top combos
+head(results_df, 10)
+
+
+
+
+
+
+
+
+
+
+
+library(dplyr)
+
+# 1. Create the grid of weight combinations
+weights <- expand.grid(
+  w_ws = seq(0.1, 0.9, by = 0.2),
+  w_per = seq(0.1, 0.9, by = 0.2),
+  w_contract = seq(0.1, 0.9, by = 0.2),
+  w_age = seq(-0.5, 0, by = 0.1)
+) %>%
+  filter(abs(w_ws + w_per + w_contract - 1) < 1e-6)
+
+# 2. Define a safe scaling function
+safe_scale <- function(x) {
+  if (all(is.na(x))) return(rep(0, length(x)))
+  as.numeric(scale(x))
+}
+
+# 3. Pre-scale variables globally to avoid group-wise NA errors
+scaled_draft <- draft_ranking %>%
+  mutate(
+    scaled_ws = safe_scale(weighted_ws),
+    scaled_per = safe_scale(weighted_per),
+    scaled_contract = safe_scale(contract_y),
+    scaled_age = if_else(age > 35, safe_scale(age), 0)
+  )
+
+
+eligible_players <- scaled_draft %>%
+  filter(!is.na(per_minute_score))
+
+# 4. Grid search
+results <- list()
+
+for (i in 1:nrow(weights)) {
+  w <- weights[i, ]
+  
+  df <- eligible_players %>%
+    group_by(team.x) %>%
+    mutate(
+      test_score =
+        w$w_ws * scaled_ws +
+        w$w_per * scaled_per +
+        w$w_contract * scaled_contract +
+        w$w_age * scaled_age,
+      test_rank = rank(-test_score, ties.method = "first"),
+      test_protected = if_else(test_rank <= 5, 1, 0)
+    ) %>%
+    ungroup()
+  
+  accuracy <- mean(df$test_protected == df$protected, na.rm = TRUE)
+  
+  results[[i]] <- c(w, accuracy = accuracy)
+}
+
+results_df <- do.call(rbind, results) %>% as.data.frame()
+results_df <- results_df %>% arrange(desc(accuracy))
+
+head(results_df, 10)
+
+
+
+
+
+
+
+
+
