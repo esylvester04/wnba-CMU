@@ -270,49 +270,49 @@ age_lookup <- tibble(
 
 selected_players <- age_lookup$player
 
-salary_table <- model_df_scaled |>
-  filter(tolower(player) %in% selected_players) |>
-  mutate(
-    actual   = as.numeric(actual),
-    xgb_pred = as.numeric(xgb_pred),
-    residual = as.numeric(residual),
-    Name     = str_to_title(player)
-  ) |>
-  left_join(age_lookup, by = "player") |>
-  arrange(desc(residual)) |>  # sort BEFORE formatting residual
-  mutate(
-  actual   = as.numeric(actual),
-  xgb_pred = as.numeric(xgb_pred),
-  residual = as.numeric(residual),
-  Name     = if_else(player == "kayla mcbride", "Kayla McBride", str_to_title(player))
-)
-
-  select(
-    Name,
-    Age,
-    Position = pos,
-    Team = team,
-    `Actual Salary`,
-    `Predicted Salary`,
-    Residual
-  ) |>
-  Name = if_else(player == "kayla mcbride", "Kayla McBride", str_to_title(player)) |>
-gt() |>
-tab_header(
-  title = md("**Top Expansion Draft Prospects**")
-) |>
-tab_style(
-  style = cell_text(weight = "bold", size = px(18)),
-  locations = cells_title(groups = "title")
-) |>
-  cols_align(
-    align = "left",
-    columns = everything()
-  ) |>
-  tab_options(
-    table.font.size = 14,
-    heading.align = "center"
-  )
+# salary_table <- model_df_scaled |>
+#   filter(tolower(player) %in% selected_players) |>
+#   mutate(
+#     actual   = as.numeric(actual),
+#     xgb_pred = as.numeric(xgb_pred),
+#     residual = as.numeric(residual),
+#     Name     = str_to_title(player)
+#   ) |>
+#   left_join(age_lookup, by = "player") |>
+#   arrange(desc(residual)) |>  # sort BEFORE formatting residual
+#   mutate(
+#   actual   = as.numeric(actual),
+#   xgb_pred = as.numeric(xgb_pred),
+#   residual = as.numeric(residual),
+#   Name     = if_else(player == "kayla mcbride", "Kayla McBride", str_to_title(player))
+# )
+# 
+#   select(
+#     Name,
+#     Age,
+#     Position = pos,
+#     Team = team,
+#     `Actual Salary`,
+#     `Predicted Salary`,
+#     Residual
+#   ) |>
+#   Name = if_else(player == "kayla mcbride", "Kayla McBride", str_to_title(player)) |>
+# gt() |>
+# tab_header(
+#   title = md("**Top Expansion Draft Prospects**")
+# ) |>
+# tab_style(
+#   style = cell_text(weight = "bold", size = px(18)),
+#   locations = cells_title(groups = "title")
+# ) |>
+#   cols_align(
+#     align = "left",
+#     columns = everything()
+#   ) |>
+#   tab_options(
+#     table.font.size = 14,
+#     heading.align = "center"
+#   )
   
   
   
@@ -362,6 +362,60 @@ salary_table <- model_df_scaled |>
 
 salary_table
 
+
+
+ggplot(eda_df, aes(x = per, y = salary_clean)) +
+  # Highlight rookie salary range
+  annotate("rect",
+           xmin = -Inf, xmax = Inf,
+           ymin = 66000, ymax = 78000,
+           fill = "red", alpha = 0.15) +
+  # Base scatter
+  geom_point(alpha = 0.7, size = 3, color = "#1f78b4") +
+  geom_label_repel(
+    data = star_df,
+    aes(label = player),
+    size = 3.5,
+    box.padding = 0.3,
+    point.padding = 0.2,
+    segment.color = "gray50",
+    segment.size = 0.7,
+    min.segment.length = 0,
+    direction = "y",
+    alpha = 0.7
+  ) +
+  # Lines at key salary thresholds
+  geom_hline(yintercept = 66000,  linetype = "dashed", color = "red", alpha = 0.5) +
+  geom_hline(yintercept = 78000,  linetype = "dashed", color = "red", alpha = 0.5) +
+  geom_hline(yintercept = 214000, linetype = "dashed", color = "green") +
+  geom_hline(yintercept = 250000, linetype = "dashed", color = "blue") +
+
+  # Text labels
+  annotate("text", x = 30, y = 72000,
+           label = "Rookie Range ($66K–$78K)", color = "red4",
+           size = 3, hjust = 0) +
+  annotate("text", x = 1.5, y = 214000 + 3000,
+           label = "Max ($214K)", color = "darkgreen",
+           size = 3, hjust = 0) +
+  annotate("text", x = 1.5, y = 250000 + 3000,
+           label = "Supermax ($249K)", color = "blue",
+           size = 3, hjust = 0) +
+
+  labs(
+    title = "Identifying Who May Be Outperforming Their Salary",
+    x = "Player Efficiency Rating (PER)",
+    y = "Salary (USD)"
+  ) +
+  scale_y_continuous(labels = dollar_format(),
+                     breaks = seq(0, 300000, by = 40000)) +
+  scale_x_continuous(breaks = seq(0, max(eda_df$per), by = 5),
+                     limits = c(0, max(eda_df$per) + 5)) +
+  theme_classic(base_size = 14) +
+  theme(
+    plot.title = element_text(face = "bold", size = 18),
+    plot.subtitle = element_text(size = 12, margin = margin(b = 10)),
+    axis.title = element_text(face = "bold")
+  )
 
 
 ```
