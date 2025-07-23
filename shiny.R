@@ -72,7 +72,7 @@ library(shiny)
 library(dplyr)
 library(stringr)
 
-draft_ranking <- read.csv("draft_ranking.csv")
+
 
 
 # UI
