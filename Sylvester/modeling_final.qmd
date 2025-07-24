@@ -905,9 +905,10 @@ cv_summary_stats <- cv_summary |>
     upper_rmse = avg_cv_rmse + se_rmse
   ) |>
   arrange(avg_cv_rmse)
+
 #write.csv(cv_summary_stats, "Presentation/cv_summary_stats.csv", row.names = FALSE)
 
-
+write.csv(cv_summary, "Presentation/cv_summary.csv", row.names = FALSE)
 
 # Order model factor levels by average RMSE
 model_order <- cv_summary_stats |> arrange(avg_cv_rmse) |> pull(model)
