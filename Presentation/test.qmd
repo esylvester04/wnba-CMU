@@ -1,0 +1,18 @@
+---
+title: "Test"
+format: html
+runtime: shiny
+execute:
+  echo: false
+---
+
+# Hello Shiny
+
+```{r, context="shiny"}
+library(shiny)
+ui <- fluidPage(
+  h1("No stray TRUE")
+)
+server <- function(input, output) {}
+shinyApp(ui, server)
+

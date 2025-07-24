@@ -129,6 +129,90 @@ ggplot(eda_df, aes(x = per, y = salary_clean)) +
 ```
 
 
+# shiny app:
+```{r, context="shiny"}
+#| echo: false
+#| warning: false
+ 
+library(shiny)
+
+draft_ranking <- read.csv("draft_ranking.csv")
+
+ui <- fluidPage(
+  tagList(
+    tags$h3(
+      "2026 WNBA Expansion Draft Predicted Protection Status",
+      style = "margin-bottom: 5px; font-weight: bold;"
+    ),
+    tags$h5(
+      "Last update: July 2025",
+      style = "margin-top: 0; color: gray;"
+    )
+  ),
+  sidebarLayout(
+    sidebarPanel(
+      selectInput(
+        inputId = "team_choice",
+        label = "Select a Team:",
+        choices = sort(unique(draft_ranking$team.x)),
+        selected = sort(unique(draft_ranking$team.x))[1]
+      )
+    ),
+    mainPanel(
+      uiOutput("protection_table")
+    )
+  )
+)
+
+
+# Server
+server <- function(input, output) {
+  
+  # Reactive filtered and cleaned data
+  filtered_data <- reactive({
+    draft_ranking %>%
+      filter(team.x == input$team_choice) %>%
+      mutate(
+        player = str_to_title(player)  # Capitalize player names
+      )
+  })
+  
+  # Render two side-by-side tables
+  output$protection_table <- renderUI({
+    fluidRow(
+      column(
+        width = 6,
+        h4("✅  Likely Protected Players"),
+        tableOutput("protected_table")
+      ),
+      column(
+        width = 6,
+        h4("❌ Unprotected Players"),
+        tableOutput("unprotected_table")
+      )
+    )
+  })
+  
+  output$protected_table <- renderTable({
+    filtered_data() %>%
+      filter(protected == 1) %>%
+      mutate(age = as.integer(age)) %>%
+      select(Player = player, Position = pos, Age = age)
+  })
+  
+  output$unprotected_table <- renderTable({
+    filtered_data() %>%
+      filter(protected == 0) %>%
+      mutate(age = as.integer(age)) %>%
+      select(Player = player, Position = pos, Age = age)
+  })
+  
+}
+
+# Run the app
+shinyApp(ui = ui, server = server)
+```
+
 
 ```{r}
 #| echo: false
@@ -472,10 +556,15 @@ ggplot(data = model_df_scaled,
     legend.title = element_text()
   )
 
+# Define character vector of selected player names
+top_overvalued_names <- c(
+  "makayla timpson", "naz hillmon", "nyara sabally", 
+  "sug sutton", "maya caldwell", "marquesha davis", "janelle salaun"
+)
 
-
-# Add individual nudges for each player label
-top_overvalued_players <- top_overvalued_players %>%
+# Filter your data to include just those players
+top_overvalued_players <- model_df_scaled |>
+  filter(player %in% top_overvalued_names) |>
   mutate(
     nudge_x = case_when(
       player == "makayla timpson" ~ -50000,
@@ -484,17 +573,17 @@ top_overvalued_players <- top_overvalued_players %>%
       player == "sug sutton"      ~ 0,
       player == "maya caldwell"   ~ -30000,
       player == "marquesha davis" ~ -50000,
-      player == "janelle salaun" ~ -50000,
+      player == "janelle salaun"  ~ -50000,
       TRUE ~ 0
     ),
     nudge_y = case_when(
       player == "makayla timpson" ~ -8000,
       player == "naz hillmon"     ~ -10000,
-      player == "nyara sabally"   ~ 0,  # move way down
+      player == "nyara sabally"   ~ 0,
       player == "sug sutton"      ~ 40000,
       player == "maya caldwell"   ~ -20000,
       player == "marquesha davis" ~ 40000,
-      player == "janelle salaun" ~ 20000,
+      player == "janelle salaun"  ~ 20000,
       TRUE ~ 0
     )
   )
@@ -529,8 +618,6 @@ ggplot(data = model_df_scaled,
   geom_label(data = top_overvalued_players,
              aes(x = actual + nudge_x, y = xgb_pred + nudge_y, label = str_to_title(player)),
              color = "black", size = 4, label.padding = unit(0.3, "lines"))
-
-
 
 
 

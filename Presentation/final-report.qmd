@@ -15,26 +15,23 @@ execute:
   echo: false
   warning: false
   message: false
-runtime: shiny
 ---
 
-## Introduction 
+# Introduction 
 
-Our main research question is: How can we use player performance and salary data to optimize an expansion draft strategy in the WNBA? The goal of this project is to develop a model that helps identify players who are likely to be protected or left unprotected by their current teams and to quantify salary inefficiencies by comparing the player performance to their current compensation. Ultimately, we aim to recommend players who would be strategic targets for an expansion team seeking to maximize talent while operating within salary cap constraints.
+In the WNBA, player salaries are governed by the league’s Collective Bargaining Agreement (CBA), which imposes strict financial constraints on team rosters. Each team must remain under a designated salary cap, and salary distributions often vary depending on a player’s experience. During an expansion draft, a new franchise can select one player from each existing team to build its roster. However, each team is allowed to “protect” a limited number of players from being drafted. With the current CBA set to expire at the end of this season, a significant number of players are entering 2026 as unrestricted free agents. Placing a constraint on expansion teams, as they are only allowed to select one unrestricted free agent that is not protected. Previous expansion draft rules allowed current teams to protect up to six players. With two teams coming into the 2026 WNBA Expansion Draft, we are making the assumption that current teams are going to be allowed to only protect 5 players.
 
-
-In the WNBA, salary distributions are operated under the Collective Bargaining Agreement (CBA). Teams are required to manage their rosters under strict financial limits. For example, each team must stay under a salary cap, with salary distributions, at times, vary based on a player’s experience in the league. This creates a challenge: build the best possible roster within a reasonable budget. During an expansion draft, new teams are allowed to select one player from each team who is left unprotected by existing franchises. Each team can “protect” a certain number of players, while the rest become available to be drafted. Teams typically protect high-performing or high-potential players, leaving others exposed due to age, injury, performance, or strategic reasons.
-
-
-Our motivation for pursuing this project stems from being able to create a model that predicts the pool of unprotected players and evaluates their performance relative to their salaries. We are particularly focused on identifying which players are undervalued and are most likely to be left unprotected in the expansion draft. Identifying these players is essential for helping new franchises build competitive rosters without overspending. However, there are some factors that front offices take into account that may not be publicly available when evaluating available players such as risks or inside intel. Ultimately, we look to project what players will be available in the 2026 WNBA expansion draft
+Our main research question is: **How can we use player performance and salary data to optimize an expansion draft strategy in the WNBA?**
 
 
-## Data
+The goal of this project is to predict which players will be left unprotected by their current 2025 team and from this pool, quantify salary inefficiencies by comparing the player performance to their current compensation. Ultimately, we aim to recommend players who would be strategic targets for an expansion team seeking to maximize talent. However, there are some factors that front offices take into account that may not be publicly available when evaluating available players such as risks or inside intel.
 
-Describe the data you’re using in detail, where you accessed it, along with relevant exploratory data analysis (EDA). You should also include descriptions of any relevant data pre-processing steps (e.g., whether you consider specific observations, create any meaningful features, etc.---but don't mention minor steps like column type conversion, filtering out unnecessary rows)
 
-### EDA
+# Data
 
+For our research, we web scraped publically available data from three sites: salary data from Spotrac, stats from Her Hoop Stats, and historical data from Basketball-Reference.
+
+We evaluated a dataset that consisted of 150–160 players for the 2023 to 2025 seasons. During the 2023 and 2024 season, there were only 12 teams to evaluate, with an additional expansion team added in the 2025 season. We looked at three main components for each player. First is the player demographics, which consist of their name, age, position, and team affiliation. Next, we looked at performance metrics, which include box score statistics (per-game stats) and advanced box score stats (such as player efficiency ratings). Lastly, we examined financial metrics, which include salary earnings, years remaining on the contract, and contract status. 
 ```{r}
 #| echo: false
 #| warning: false
@@ -58,6 +55,63 @@ eda_df <- read_csv("eda_df.csv")
 ```{r}
 #| echo: false
 #| warning: false
+
+library(dplyr)
+library(gt)
+library(stringr)
+
+merged_df <- eda_df |>
+  left_join(model_df |> select(player, actual), by = "player")
+
+eda_players <- c(
+  "caitlin clark", "a'ja wilson", "aliyah boston",
+  "napheesa collier"
+)
+
+# Filter for star players and prepare table
+star_table <- merged_df |>
+  filter(player %in% eda_players) |>
+  mutate(player = str_to_title(player)) |>
+  select(
+    player,
+    Salary,
+    per,
+    pos = pos.x,
+    team = team.x, 
+    ts_percent, 
+    e_fg_percent, 
+    trb_percent
+  )
+
+
+star_table |>
+  arrange(desc(Salary)) |>
+  gt()  |>
+  fmt_percent(columns = c(ts_percent, e_fg_percent, trb_percent), decimals = 1) |>
+  cols_label(
+    player = "Player",
+    Salary = "Salary",
+    pos = "Position",
+    per = "PER",
+    team = "Team", 
+    ts_percent = "True Shooting %", 
+    e_fg_percent = "Effective FG %", 
+    trb_percent = "Total Rebounding %"
+  )|>
+  tab_caption("Table: Star players' salary and performance metrics.")
+
+```
+
+## Exploratory Data Analysis 
+
+We were curious to explore the relationship between on-court production and salary in the WNBA. Specifically, we examined how player efficiency rating (PER) corresponds to 2025 salary across the league. Important salary benchmarks in the league include the rookie-scale, maximum, and supermax contracts; we aimed to uncover where mismatches occur, including efficient players on low-paying rookie deals or veterans earning near the salary cap despite middling production. Highlighting standout players further helped surface cases of potential undervaluation or overpayment.
+
+
+```{r}
+#| echo: false
+#| warning: false
+#| fig-cap: "This scatterplot shows player efficiency rating (PER) vs. salary for active players in the 2025 WNBA season."
+
 
 #### PER / Salary EDA scatterplot: 
 # Define the nine star players to highlight
@@ -126,7 +180,7 @@ ggplot(eda_df, aes(x = per,
            size = 3, hjust = 0) +
 
   labs(
-    title = "Identifying who may be outperforming their salary",
+    title = "PER vs 2025 Salary",
     x = "Player Efficiency Rating (PER)",
     y = "Salary (USD)"
   ) +
@@ -137,7 +191,7 @@ ggplot(eda_df, aes(x = per,
   #coord_cartesian(clip = "off") +
   theme_classic(base_size = 14) +
   theme(
-    plot.title = element_text(size = 18),
+    plot.title = element_text(face = "bold", size = 18),
     plot.subtitle = element_text(size = 12, margin = margin(b = 15)),
     axis.title = element_text(),
     plot.margin = margin(t = 15, r = 15, b = 15, l = 25),  # left margin increased
@@ -145,101 +199,165 @@ ggplot(eda_df, aes(x = per,
 ```
 
 
-## Methods
+# Methods
 
-Describe the modeling techniques you chose, their assumptions, justifications for why they are appropriate for the problem, and how you're comparing/evaluating the different methods.
+::: {.panel-tabset}
+ 
+## Salary Model
 
-## Results
+To help quantify player value in the WNBA, we fit and trained an XGBoost model to predict player salaries based on performance and contract-related factors. The model used three key variables: a multi-year weighted PER (with recent seasons weighted more heavily), player age, and the player’s share of their current team’s salary cap. Our goal was to identify players who may be underpaid relative to their on-court contributions. We focused on positive residuals, cases where the model predicted a higher salary than the player currently earns, as a way to flag potential value picks for expansion.
 
-Describe your results. This can include tables and plots showing your results, as well as text describing how your models worked and the appropriate interpretations of the relevant output. (Note: Don’t just write out the textbook interpretations of all model coefficients. Instead, interpret the output that is relevant for your question of interest that is framed in the introduction)
+To evaluate model performance, we used 5-fold cross-validation. The dataset was divided into five parts; each fold served once as a test set, while the remaining folds were used for training. We compared five models:
+* Linear Regression
+* Polynomial Regression, adding a squared term for age
+* LASSO Regression, using L1 regularization to penalize complexity and perform feature selection
+* Ridge Regression, using L2 regularization to shrink coefficients and reduce variance;
+* XGBoost, a gradient boosting algorithm that builds an ensemble of shallow trees trained sequentially on residuals.
 
+All models were evaluated using Root Mean Squared Error (RMSE). RMSE was summarized across folds using means, standard deviations, standard errors, and 95% confidence intervals; the XGBoost model was selected as the best performing model. Unlike a single large decision tree that may overfit, boosting improves performance incrementally by focusing each tree on correcting the errors of the current model. A learning rate controls how much each tree contributes, helping to balance flexibility and generalization. 
 
-```{r, context="shiny"}
+```{r}
 #| echo: false
 #| warning: false
- 
-library(shiny)
+library(ggtext)
 
-draft_ranking <- read.csv("draft_ranking.csv")
 
-ui <- fluidPage(
-  tagList(
-    tags$h3(
-      "2026 WNBA Expansion Draft Predicted Protection Status",
-      style = "margin-bottom: 5px; font-weight: bold;"
-    ),
-    tags$h5(
-      "Last update: July 2025",
-      style = "margin-top: 0; color: gray;"
-    )
-  ),
-  sidebarLayout(
-    sidebarPanel(
-      selectInput(
-        inputId = "team_choice",
-        label = "Select a Team:",
-        choices = sort(unique(draft_ranking$team.x)),
-        selected = sort(unique(draft_ranking$team.x))[1]
-      )
-    ),
-    mainPanel(
-      uiOutput("protection_table")
-    )
+cv_summary_stats <- read_csv("cv_summary_stats.csv")
+
+# Order model factor levels by average RMSE
+model_order <- cv_summary_stats |> arrange(avg_cv_rmse) |> pull(model)
+
+
+cv_summary |>
+  mutate(model = factor(model, levels = model_order)) |>
+  ggplot(aes(x = model, y = rmse)) +
+  geom_point(size = 4, alpha = 0.7, color = "steelblue") +
+  stat_summary(fun = mean, geom = "point", color = "firebrick", size = 5, shape = 18) +
+  stat_summary(fun.data = mean_se, geom = "errorbar", color = "firebrick", width = 0.2) +
+  scale_x_discrete(labels = c(
+    lm_pred = "**Linear Model**",
+    poly_pred = "**Polynomial (Age²)**",
+    lasso_pred = "**LASSO**",
+    ridge_pred = "**Ridge**",
+    xgb_pred = "**XGBoost**"
+  )) +
+  labs(
+    title = "**Model Comparison: 5-Fold Cross-Validation RMSE**",
+    x = "Model Type",
+    y = "RMSE (Predicted Salary)"
+  ) +
+  theme_minimal(base_size = 13) +
+  theme(
+    plot.title = element_markdown(hjust = 0.5, size = 16),
+    axis.title.x = element_text(face = "bold"),
+    axis.title.y = element_text(face = "bold"),
+    axis.text.x = element_markdown()
   )
-)
-
-
-# Server
-server <- function(input, output) {
-  
-  # Reactive filtered and cleaned data
-  filtered_data <- reactive({
-    draft_ranking %>%
-      filter(team.x == input$team_choice) %>%
-      mutate(
-        player = str_to_title(player)  # Capitalize player names
-      )
-  })
-  
-  # Render two side-by-side tables
-  output$protection_table <- renderUI({
-    fluidRow(
-      column(
-        width = 6,
-        h4("✅  Likely Protected Players"),
-        tableOutput("protected_table")
-      ),
-      column(
-        width = 6,
-        h4("❌ Unprotected Players"),
-        tableOutput("unprotected_table")
-      )
-    )
-  })
-  
-  output$protected_table <- renderTable({
-    filtered_data() %>%
-      filter(protected == 1) %>%
-      mutate(age = as.integer(age)) %>%
-      select(Player = player, Position = pos, Age = age)
-  })
-  
-  output$unprotected_table <- renderTable({
-    filtered_data() %>%
-      filter(protected == 0) %>%
-      mutate(age = as.integer(age)) %>%
-      select(Player = player, Position = pos, Age = age)
-  })
-  
-}
-
-# Run the app
-shinyApp(ui = ui, server = server)
 ```
 
 
-::: {.panel-tabset}
-## Results table
+## Protection Predictions
+
+To predict which players each WNBA team would protect in the expansion draft, we created a heuristic player ranking formula. It assigned a performance score to each player based on: Player Efficiency Rating (PER), Win Shares (WS), years remaining on their contract, and age.
+
+* PER and WS were selected to represent on-court impact, individual efficiency and contribution to team success.
+
+* Years remaining on contract, assuming teams are likely to retain players with long-term control.
+
+* Age, assuming teams will prioritize younger players with growth potential
+
+Individually, PER and WS were aggregated from the 2023-2025 seasons using a weighted average. Weighted performance for 2023: 10%, 2024: 30% and 2025: 60%. Reasoning for the weights was the idea that teams consider multiple years of performance, but place more emphasis on recent seasons to better reflect a player’s current play and impact. Variables were standardized using scale() to account for differences in scale and magnitude.
+
+Initial weights in the ranking formula were chosen based on domain knowledge:
+
+* Weighted PER and Weighted WS were used to capture on-court performance
+
+* Contract years to represent a team want to retain players under contract.
+
+* Age penalty to players over 35 to reflect decreased likelihood of protection due to aging.
+$$PER * (0.3) + WS * (0.2) + Contract Years * (0.1) + Age penalty * (-0.3)$$
+
+The formula combined the weighted metrics to produce a performance score, and players were ranked within their team. The top five scored players were assumed to be protected.
+
+*Evaluation of formula*
+
+To evaluate the robustness of the heuristic formula, a series of model iterations called “runs” were implemented.  Each run applied a different combination of weights to metrics used in the protection formula.
+
+
+For each run, the formula recalculates a score for every player and identifies the top five players on each team as “protected.” Dozens of runs were generated using different weight combinations, simulating a wide range of decision-making possibilities. This approach allowed observations of players who were consistently protected and which were more sensitive to weight changes. By tracking these protection decisions across runs, each player’s protection rate was calculated. It assessed the stability of the protection formula and identified swing players( those whose protection status changed frequently depending on weights).
+
+:::
+
+# Results
+
+
+```{r}
+#| echo: false
+#| warning: false
+# Define character vector of selected player names
+top_overvalued_names <- c(
+  "makayla timpson", "naz hillmon", "nyara sabally", 
+  "sug sutton", "maya caldwell", "marquesha davis", "janelle salaun"
+)
+
+# Filter your data to include just those players
+top_overvalued_players <- model_df_scaled |>
+  filter(player %in% top_overvalued_names) |>
+  mutate(
+    nudge_x = case_when(
+      player == "makayla timpson" ~ -50000,
+      player == "naz hillmon"     ~  40000,
+      player == "nyara sabally"   ~ 60000,
+      player == "sug sutton"      ~ 0,
+      player == "maya caldwell"   ~ -30000,
+      player == "marquesha davis" ~ -50000,
+      player == "janelle salaun"  ~ -50000,
+      TRUE ~ 0
+    ),
+    nudge_y = case_when(
+      player == "makayla timpson" ~ -8000,
+      player == "naz hillmon"     ~ -10000,
+      player == "nyara sabally"   ~ 0,
+      player == "sug sutton"      ~ 40000,
+      player == "maya caldwell"   ~ -20000,
+      player == "marquesha davis" ~ 40000,
+      player == "janelle salaun"  ~ 20000,
+      TRUE ~ 0
+    )
+  )
+
+ggplot(data = model_df_scaled, 
+       aes(x = actual, y = xgb_pred, color = residual)) +
+  geom_point(alpha = 0.7, size = 2) +
+  geom_abline(slope = 1, intercept = 0, 
+              linetype = "dashed", color = "grey80") +
+  scale_x_continuous(labels = dollar_format(prefix = "$")) +
+  scale_y_continuous(labels = dollar_format(prefix = "$")) +
+  scale_color_gradient2(
+    low = "firebrick", mid = "gray80", high = "forestgreen", midpoint = 0
+  ) +
+  labs(
+    title = "Predicted vs. Actual WNBA 2025 Salaries",
+    x = "Actual 2025 Salary",
+    y = "Predicted 2025 Salary"
+  ) +
+  theme_minimal(base_size = 15) +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = "bold"),
+    axis.title = element_text(),
+    legend.title = element_text()
+  ) +
+  # Add connecting lines
+  geom_segment(data = top_overvalued_players,
+               aes(x = actual, y = xgb_pred, 
+                   xend = actual + nudge_x, yend = xgb_pred + nudge_y), 
+               color = "grey", size = 0.75) +
+  # Add labels
+  geom_label(data = top_overvalued_players,
+             aes(x = actual + nudge_x, y = xgb_pred + nudge_y, label = str_to_title(player)),
+             color = "black", size = 2.5, label.padding = unit(0.3, "lines"))
+```
+
 
 ```{r}
 #| echo: false
@@ -311,9 +429,7 @@ salary_table
 ```
 
 
-:::
-
-## Discussion
+# Discussion
 
 
 
@@ -335,11 +451,11 @@ Give your conclusions and summarize what you have learned with regards to your q
 #| fig-height: 3.5
 #| fig-cap: "This is a caption. It should explain what's in the figure and what's interesting about it. For instance: There is a negative, strong linear correlation between miles per gallon and horsepower for US cars in the 1970s."
 
-# library(tidyverse)
-# mtcars |> 
-#   ggplot(aes(x = mpg, y = hp)) +
-#   geom_point() +
-#   labs(x = "Miles per gallon",
-#        y = "Horsepower")
+library(tidyverse)
+mtcars |>
+  ggplot(aes(x = mpg, y = hp)) +
+  geom_point() +
+  labs(x = "Miles per gallon",
+       y = "Horsepower")
 ```
 
