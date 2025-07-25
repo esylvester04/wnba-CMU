@@ -21,7 +21,7 @@ execute:
 
 In the WNBA, player salaries are governed by the league’s Collective Bargaining Agreement (CBA), which imposes strict financial constraints on team rosters. Each team must remain under a designated salary cap, and salary distributions often vary depending on a player’s experience. During an expansion draft, a new franchise can select one player from each existing team to build its roster. However, each team is allowed to “protect” a limited number of players from being drafted. With the current CBA set to expire at the end of this season, a significant number of players are entering 2026 as unrestricted free agents. Placing a constraint on expansion teams, as they are only allowed to select one unrestricted free agent that is not protected. Previous expansion draft rules allowed current teams to protect up to six players. With two teams coming into the 2026 WNBA Expansion Draft, we are making the assumption that current teams are going to be allowed to only protect 5 players.
 
-Our main research question is: **How can we use player performance and salary data to optimize an expansion draft strategy in the WNBA?**
+Our main research question is: *How can we use player performance and salary data to optimize an expansion draft strategy in the WNBA?*
 
 
 The goal of this project is to predict which players will be left unprotected by their current 2025 team and from this pool, quantify salary inefficiencies by comparing the player performance to their current compensation. Ultimately, we aim to recommend players who would be strategic targets for an expansion team seeking to maximize talent. However, there are some factors that front offices take into account that may not be publicly available when evaluating available players such as risks or inside intel.
@@ -208,13 +208,16 @@ ggplot(eda_df, aes(x = per,
 To help quantify player value in the WNBA, we fit and trained an XGBoost model to predict player salaries based on performance and contract-related factors. The model used three key variables: a multi-year weighted PER (with recent seasons weighted more heavily), player age, and the player’s share of their current team’s salary cap. Our goal was to identify players who may be underpaid relative to their on-court contributions. We focused on positive residuals, cases where the model predicted a higher salary than the player currently earns, as a way to flag potential value picks for expansion.
 
 To evaluate model performance, we used 5-fold cross-validation. The dataset was divided into five parts; each fold served once as a test set, while the remaining folds were used for training. We compared five models:
-* Linear Regression
-* Polynomial Regression, adding a squared term for age
-* LASSO Regression, using L1 regularization to penalize complexity and perform feature selection
-* Ridge Regression, using L2 regularization to shrink coefficients and reduce variance;
-* XGBoost, a gradient boosting algorithm that builds an ensemble of shallow trees trained sequentially on residuals.
 
-All models were evaluated using Root Mean Squared Error (RMSE). RMSE was summarized across folds using means, standard deviations, standard errors, and 95% confidence intervals; the XGBoost model was selected as the best performing model. Unlike a single large decision tree that may overfit, boosting improves performance incrementally by focusing each tree on correcting the errors of the current model. A learning rate controls how much each tree contributes, helping to balance flexibility and generalization. 
+* Linear Regression
+
+* Polynomial Regression, adding a squared term for age
+
+* LASSO Regression, using L1 regularization to penalize complexity and perform feature selection
+
+* Ridge Regression, using L2 regularization to shrink coefficients and reduce variance;
+
+* XGBoost, a gradient boosting algorithm that builds an ensemble of shallow trees trained sequentially on residuals.
 
 ```{r}
 #| echo: false
@@ -222,6 +225,7 @@ All models were evaluated using Root Mean Squared Error (RMSE). RMSE was summari
 library(ggtext)
 
 
+cv_summary <- read_csv("cv_summary.csv")
 cv_summary_stats <- read_csv("cv_summary_stats.csv")
 
 # Order model factor levels by average RMSE
@@ -255,6 +259,7 @@ cv_summary |>
   )
 ```
 
+All models were evaluated using Root Mean Squared Error (RMSE). RMSE was summarized across folds using means, standard deviations, standard errors, and 95% confidence intervals; the XGBoost model was selected as the best performing model. Unlike a single large decision tree that may overfit, boosting improves performance incrementally by focusing each tree on correcting the errors of the current model. A learning rate controls how much each tree contributes, helping to balance flexibility and generalization. 
 
 ## Protection Predictions
 
@@ -264,7 +269,7 @@ To predict which players each WNBA team would protect in the expansion draft, we
 
 * Years remaining on contract, assuming teams are likely to retain players with long-term control.
 
-* Age, assuming teams will prioritize younger players with growth potential
+* Age, assuming teams will prioritize younger players with growth potential.
 
 Individually, PER and WS were aggregated from the 2023-2025 seasons using a weighted average. Weighted performance for 2023: 10%, 2024: 30% and 2025: 60%. Reasoning for the weights was the idea that teams consider multiple years of performance, but place more emphasis on recent seasons to better reflect a player’s current play and impact. Variables were standardized using scale() to account for differences in scale and magnitude.
 
@@ -274,12 +279,13 @@ Initial weights in the ranking formula were chosen based on domain knowledge:
 
 * Contract years to represent a team want to retain players under contract.
 
-* Age penalty to players over 35 to reflect decreased likelihood of protection due to aging.
-$$PER * (0.3) + WS * (0.2) + Contract Years * (0.1) + Age penalty * (-0.3)$$
+* Age penalty to players over 35 to reflect decreased likelihood of protection due to aging. $ \text{PER} * (0.3) + \text{WS} * (0.2) + \text{Contract Years} * (0.1) + \text{Age penalty} * (-0.3)$
 
-The formula combined the weighted metrics to produce a performance score, and players were ranked within their team. The top five scored players were assumed to be protected.
+The formula combined the weighted metrics to produce a performance score, and players were ranked within their team. The top five scored players were assumed to be protected. Explore our
+[Shiny App](https://isabellaferrandiz.shinyapps.io/shiny-protection-app/){target="_blank"} to see all team breakdowns.
 
-*Evaluation of formula*
+
+**Evaluation of formula**
 
 To evaluate the robustness of the heuristic formula, a series of model iterations called “runs” were implemented.  Each run applied a different combination of weights to metrics used in the protection formula.
 
@@ -289,6 +295,11 @@ For each run, the formula recalculates a score for every player and identifies t
 :::
 
 # Results
+
+To determine the final expansion draft targets, we began with the full pool of unprotected players. Players were first categorized by position: centers, forwards, and guards. Once players were grouped by position, we ranked them in descending order based on their residuals from the salary prediction model. This highlighted players whose actual salaries were lower than their predicted value, showing undervalued talent.
+
+
+The selection process prioritized players with the highest positive residuals within each position group, helping us identify the most undervalued prospects. This approach ensured our recommendations balanced positional needs while maximizing potential value across all key positions.
 
 
 ```{r}
@@ -358,6 +369,7 @@ ggplot(data = model_df_scaled,
              color = "black", size = 2.5, label.padding = unit(0.3, "lines"))
 ```
 
+Our final results are a list of players we believe would be great prospects in the upcoming expansion draft due to their contact status, age, experience, and ability. 
 
 ```{r}
 #| echo: false
@@ -431,31 +443,12 @@ salary_table
 
 # Discussion
 
+We faced several limitations in our research and data collection. Public information on player protection status from past WNBA expansion drafts is extremely limited, and frequent roster changes, due to injuries, overseas commitments, personal matters, and contract movement, made it challenging to maintain consistent and accurate data. Since the 2025 WNBA season is still ongoing, shifting lineups and salaries may further affect the reliability of our predictions.
 
+Looking ahead, upcoming changes to the WNBA’s Collective Bargaining Agreement (CBA), expected to reset later this year, will likely significantly reshape league economics. Players are pushing for higher salaries, revenue sharing, expanded benefits, and a reduced draft age. These changes will likely influence salary distributions and roster-building strategies and evolving landscape in the WNBA presents opportunity. Future research could incorporate projected CBA changes and player availability to build more robust models, simulating how an expansion team might perform competitively and financially in seasons to come.
 
-Give your conclusions and summarize what you have learned with regards to your question of interest. Are there any limitations with the approaches you used? What do you think are the next steps to follow-up your project?
+# Acknowledgments
+ 
+Special thanks to James Hyman, Quang Nguyen, Dr. Ron Yurko and the CMSACamp TA’s for their feedback and guidance during the research process. 
 
-
-
-
-
-## Appendix: A quick tutorial
-
-
-
-```{r}
-#| echo: false
-#| warning: false
-#| results: 'hide'
-#| fig-width: 5
-#| fig-height: 3.5
-#| fig-cap: "This is a caption. It should explain what's in the figure and what's interesting about it. For instance: There is a negative, strong linear correlation between miles per gallon and horsepower for US cars in the 1970s."
-
-library(tidyverse)
-mtcars |>
-  ggplot(aes(x = mpg, y = hp)) +
-  geom_point() +
-  labs(x = "Miles per gallon",
-       y = "Horsepower")
-```
 
