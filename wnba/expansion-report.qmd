@@ -279,10 +279,13 @@ Initial weights in the ranking formula were chosen based on domain knowledge:
 
 * Contract years to represent a team want to retain players under contract.
 
-* Age penalty to players over 35 to reflect decreased likelihood of protection due to aging. $ \text{PER} * (0.3) + \text{WS} * (0.2) + \text{Contract Years} * (0.1) + \text{Age penalty} * (-0.3)$
+* Age penalty to players over 35 to reflect decreased likelihood of protection due to aging. 
+
 
 The formula combined the weighted metrics to produce a performance score, and players were ranked within their team. The top five scored players were assumed to be protected. Explore our
 [Shiny App](https://isabellaferrandiz.shinyapps.io/shiny-protection-app/){target="_blank"} to see all team breakdowns.
+
+$\text{PER}(0.3) + \text{WS}(0.2) + \text{Contract Years}(0.1) + \text{Age penalty}(-0.3)$
 
 
 **Evaluation of formula**
